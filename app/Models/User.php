@@ -25,6 +25,8 @@ class User extends Authenticatable
         'contact_number',
         'password',
         'account_type',
+        'status',
+        'daycare_id',
     ];
 
 
@@ -71,5 +73,12 @@ class User extends Authenticatable
     {
         return $this->account_type === 'parent';
     }
+
+
+    public function daycare()
+    {
+        return $this->belongsTo(Daycare::class);
+    }
+
 
 }

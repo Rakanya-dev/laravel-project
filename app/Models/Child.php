@@ -14,4 +14,9 @@ class Child extends Model
         'birthdate',
         'daycare_id',
     ];
+
+    public function daycare()
+    {
+        return $this->belongsTo(Daycare::class);
+    }
 }

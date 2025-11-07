@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->string('contact_number');
             $table->string('password');
             $table->enum('account_type', ['admin', 'teacher', 'parent'])->default('parent');
+            $table->string('status')->default('pending')->after('email');
             $table->foreignId('daycare_id')->nullable()->constrained('daycares')->onDelete('cascade');
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();

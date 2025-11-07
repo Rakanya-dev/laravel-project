@@ -36,9 +36,38 @@ export interface User {
     middle_name?: string;
     last_name: string;
     email: string;
+    contact_number: string;
+    status: string;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    daycare?: {
+        id: number;
+        name: string; // 👈 this matches what's sent from backend
+    };
     [key: string]: unknown; // This allows for additional properties...
 }
+
+export interface Child {
+  id: number;
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  birthdate: string;
+  daycare_id: number;
+  daycare?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface Daycare {
+  id: number;
+  name: string;
+  address: string;
+  contact_person: string;
+  contact_number: string;
+  children: Child[];
+}
+

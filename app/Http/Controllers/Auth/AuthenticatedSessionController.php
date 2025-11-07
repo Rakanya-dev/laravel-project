@@ -33,7 +33,21 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+
+        // Redirect based on account_type
+        $user = $request->user();
+
+        switch ($user->account_type) {
+            case 'admin':
+                return redirect()->intended(route('admin.dashboard'));
+            case 'teacher':
+                return redirect()->intended(route('teacher.dashboard'));
+            case 'parent':
+                return redirect()->intended(route('parent.dashboard'));
+            default:
+                abort(403, 'Unauthorized account type');
+        }
+
     }
 
     /**
