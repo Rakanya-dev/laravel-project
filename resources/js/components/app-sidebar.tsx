@@ -13,6 +13,31 @@ const mainNavItems: NavItem[] = [
         href: '/dashboard',
         icon: LayoutGrid,
     },
+    {
+        title: 'User Management',
+        href: '/user_management',
+        icon: Folder,
+    },
+    {
+        title: 'Daycare Management',
+        href: '/daycare_management',
+        icon: Folder,
+    },
+    {
+        title: 'Child Management',
+        href: '/child_management',
+        icon: Folder,
+    },
+    {
+        title: 'Reports',
+        href: '/reports',
+        icon: Folder,
+    },
+    {
+        title: 'Messages',
+        href: '/messages',
+        icon: Folder,
+    },
 ];
 
 const footerNavItems: NavItem[] = [

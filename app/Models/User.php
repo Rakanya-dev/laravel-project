@@ -18,10 +18,15 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'email',
+        'contact_number',
         'password',
+        'account_type',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -45,4 +50,26 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function getFullNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->middle_name} {$this->last_name}");
+    }
+
+
+    public function isAdmin()
+    {
+        return $this->account_type === 'admin';
+    }
+
+    public function isTeacher()
+    {
+        return $this->account_type === 'teacher';
+    }
+
+    public function isParent()
+    {
+        return $this->account_type === 'parent';
+    }
+
 }

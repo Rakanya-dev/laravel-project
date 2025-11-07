@@ -3,21 +3,24 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class AdminSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        DB::table('users')->insert([
-            'name' => 'Admin',
+        User::create([
+            'first_name' => 'Admin',
+            'middle_name' => '',
+            'last_name' => 'User',
             'email' => 'admin@daycare.com',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'daycare_id' => null,
-            'created_at' => now(),
-            'updated_at' => now(),
+            'contact_number' => '09123456789',
+            'password' => Hash::make('admin123'), // Use env var for production
+            'account_type' => 'admin',
+            'daycare_id' => null, // Admin might assign this later
+            'email_verified_at' => now(),
+            'remember_token' => null,
         ]);
     }
 }
