@@ -15,7 +15,7 @@ class RedirectIfNotAdmin
      */
     public function handle($request, Closure $next)
     {
-        if (!auth()->user() || auth()->user()->account_type !== 'admin') {
+        if (!auth()->user() || auth()->user()->role !== 'admin') {
             abort(403);
         }
 

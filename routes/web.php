@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\DaycareManagementController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\UsersManagementController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +13,7 @@ Route::get('/', fn() => Redirect::route('login'))->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/redirect-by-role', function () {
         $user = Auth::user();
-        return match ($user->account_type) {
+        return match ($user->role) {
             'admin' => redirect()->route('admin.dashboard'),
             'teacher' => redirect()->route('teacher.dashboard'),
             'parent' => redirect()->route('parent.dashboard'),
@@ -26,19 +25,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::get('/users-management', [UsersManagementController::class, 'index'])->name('users.management');
+        Route::get('/users-management', [UsersController::class, 'index'])->name('users.management');
 
-        // Add Teacher Account
-        Route::get('/users/create', [UsersController::class, 'create'])->name('users.create');
-        Route::post('/users', [UsersController::class, 'store'])->name('users.store');
+            // Route for Add Teacher (your store method)
+        Route::post('/teachers', [UsersController::class, 'store'])
+            ->name('admin.teachers.store');
 
-        // View Single User (optional)
-        Route::get('/users/{id}', [UsersController::class, 'show'])->name('users.show');
+        // Route for Edit User (your update method)
+        Route::patch('/users/{id}', [UsersController::class, 'update'])
+            ->name('admin.users.update');
 
-        // Approve or Reject Parent Accounts
+        // --- FIX FOR APPROVE/REJECT ---
+        // These MUST be POST routes to match your React code
 
-        Route::post('/users/{id}/approve', [UsersController::class, 'approve'])->name('users.approve');
-        Route::post('/users/{id}/reject', [UsersController::class, 'reject'])->name('users.reject');
+        Route::post('/users/{id}/approve', [UsersController::class, 'approve'])
+            ->name('admin.users.approve');
+
+        Route::post('/users/{id}/reject', [UsersController::class, 'reject'])
+            ->name('admin.users.reject');
+
+        // --- Other routes ---
+        Route::delete('/users/{id}', [UsersController::class, 'delete'])
+            ->name('admin.users.delete');
+
+        Route::get('/users/export', [UsersController::class, 'export'])
+            ->name('admin.users.export');
+
+        Route::get('/users-management', [UsersController::class, 'index'])
+            ->name('admin.users.management');
 
         // Daycare Management
         Route::get('/daycare-management', [DaycareManagementController::class, 'index'])->name('daycare.index');

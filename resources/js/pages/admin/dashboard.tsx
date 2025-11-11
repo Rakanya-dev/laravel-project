@@ -74,7 +74,7 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ⚡ Quick Actions */}
+               {/* ⚡ Quick Actions */}
                 <div className="flex flex-col gap-4">
                     <div>
                         <h2 className="text-foreground text-xl font-semibold">Quick Actions</h2>
@@ -82,14 +82,16 @@ export default function AdminDashboard() {
                     </div>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
                         {[
-                            { href: '/admin/users/create', icon: <PlusCircle className="text-primary h-6 w-6" />, label: 'Add New User' },
-                            { href: '/admin/daycares', icon: <School className="text-primary h-6 w-6" />, label: 'Manage Daycares' },
+                            // --- FIX: Use relative URLs, not route() ---
+                            { href: '/admin/users-management', icon: <PlusCircle className="text-primary h-6 w-6" />, label: 'Add New User' },
+                            { href: '/admin/daycare-management', icon: <School className="text-primary h-6 w-6" />, label: 'Manage Daycares' },
                             { href: '/admin/reports', icon: <FolderOpen className="text-primary h-6 w-6" />, label: 'View Reports' },
                             { href: '/admin/messages', icon: <MessageCircle className="text-primary h-6 w-6" />, label: 'Messages' },
+
                         ].map(({ href, icon, label }, i) => (
                             <Link
                                 key={i}
-                                href={href}
+                                href={href} // This now uses the simple string '/admin/users-management'
                                 className="bg-background flex items-center gap-3 rounded-2xl border p-6 transition hover:shadow-md"
                             >
                                 {icon}

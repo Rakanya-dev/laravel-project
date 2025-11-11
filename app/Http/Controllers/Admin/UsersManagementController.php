@@ -21,7 +21,7 @@ class UsersManagementController extends Controller
 
         $daycares = Daycare::all();
 
-        return Inertia::render('admin/users-management', [
+        return Inertia::render('admin/users-management/users-management', [
             'teachers' => $teachers,
             'parents' => $parents,
             'daycares' => $daycares,

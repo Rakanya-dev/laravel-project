@@ -8,7 +8,7 @@ import { Baby, BookOpen, Building2, ClipboardList, FileBarChart2, FileText, Fold
 import AppLogo from './app-logo';
 export function AppSidebar() {
     const { auth } = usePage().props as any;
-    const role = auth?.user?.account_type;
+    const role = auth?.user?.role;
 
     const adminNavItems: NavItem[] = [
         { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },

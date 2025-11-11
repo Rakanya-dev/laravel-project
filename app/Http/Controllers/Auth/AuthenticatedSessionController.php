@@ -30,14 +30,11 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-
-        // Redirect based on account_type
         $user = $request->user();
 
-        switch ($user->account_type) {
+        switch ($user->role) {
             case 'admin':
                 return redirect()->intended(route('admin.dashboard'));
             case 'teacher':
@@ -45,9 +42,11 @@ class AuthenticatedSessionController extends Controller
             case 'parent':
                 return redirect()->intended(route('parent.dashboard'));
             default:
+                // --- THIS IS YOUR ERROR ---
+                // You are logged in, but your user's role is NOT
+                // 'admin', 'teacher', or 'parent'.
                 abort(403, 'Unauthorized account type');
         }
-
     }
 
     /**

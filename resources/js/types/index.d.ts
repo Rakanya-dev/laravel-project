@@ -36,19 +36,19 @@ export interface User {
     middle_name?: string;
     last_name: string;
     email: string;
-    contact_number: string;
+    phone: string;
     status: string;
+    role: string; // 👈 ADD THIS LINE
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
     daycare?: {
         id: number;
-        name: string; // 👈 this matches what's sent from backend
+        name: string;
     };
-    [key: string]: unknown; // This allows for additional properties...
+    [key: string]: unknown;
 }
-
 export interface Child {
   id: number;
   first_name: string;
