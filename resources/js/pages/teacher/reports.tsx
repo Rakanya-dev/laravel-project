@@ -1,74 +1,81 @@
-import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Download, Eye } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppLayout from '@/layouts/app-layout';
+import { Head } from '@inertiajs/react';
+import { FileText } from 'lucide-react';
+import { useState } from 'react';
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Reports',
-    href: '/teacher/reports',
-  },
-];
+import { ReportGenerator } from '@/components/reports/report-generator';
+import { ReportsAnalyticsTab } from '@/components/reports/reports-analytics-tab';
+import { ReportsGeneratedTab } from '@/components/reports/reports-generated-tab';
+import { ReportsOverviewTab } from '@/components/reports/reports-overview-tab';
 
-export default function TeacherReports() {
-  return (
-    <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Reports" />
-      <div className="flex flex-1 flex-col gap-4 rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-neutral-800 dark:text-white">Assessment Reports</h1>
-          <Input
-            type="text"
-            placeholder="Search child name..."
-            className="max-w-sm"
-          />
-        </div>
+interface ReportsPageProps {
+    overviewStats: any;
+    analytics: any;
+    recentReports: any[];
+    generatedReports: any[];
+    templates: any[];
+    students: any[];
+}
 
-        <div className="overflow-x-auto rounded-xl border dark:border-neutral-700">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-neutral-100 dark:bg-neutral-800">
-              <tr>
-                <th className="px-4 py-3 font-medium text-neutral-600 dark:text-neutral-300">Child Name</th>
-                <th className="px-4 py-3 font-medium text-neutral-600 dark:text-neutral-300">Daycare</th>
-                <th className="px-4 py-3 font-medium text-neutral-600 dark:text-neutral-300">Last Assessment</th>
-                <th className="px-4 py-3 font-medium text-neutral-600 dark:text-neutral-300">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-neutral-700">
-              {[
-                {
-                  name: 'Yahna Chaelin D. Arpon',
-                  daycare: 'GMA CDC',
-                  lastAssessment: 'June 2025',
-                },
-                {
-                  name: 'Elijah R. Cruz',
-                  daycare: 'GMA CDC',
-                  lastAssessment: 'May 2025',
-                },
-              ].map((child, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-3 text-neutral-800 dark:text-white">{child.name}</td>
-                  <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{child.daycare}</td>
-                  <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{child.lastAssessment}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <Button size="sm" variant="outline">
-                      <Eye className="mr-2 size-4" />
-                      View
+export default function TeacherReports({ overviewStats, analytics, recentReports, generatedReports = [], templates, students }: ReportsPageProps) {
+    const [activeTab, setActiveTab] = useState('overview');
+    const [showGenerator, setShowGenerator] = useState(false);
+
+
+    const safeAnalytics = {
+        monthlyTrends: analytics?.monthlyTrends || [],
+        domainPerformance: analytics?.domainPerformance || [],
+        outcomeDistribution: analytics?.outcomeDistribution || [],
+        ...analytics,
+    };
+    const safeOverviewStats = overviewStats || { total: 0, uniqueChildren: 0, avgScore: 0, completionRate: 0 };
+
+    return (
+        <AppLayout breadcrumbs={[{ title: 'My Reports', href: '/teacher/reports' }]}>
+            <Head title="Reports & Analytics" />
+
+            <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-black">My Reports</h2>
+                        <p className="text-neutral-600">Track student progress and generate reports</p>
+                    </div>
+                    <Button className="bg-black hover:bg-neutral-800" onClick={() => setShowGenerator(true)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        New Report
                     </Button>
-                    <Button size="sm">
-                      <Download className="mr-2 size-4" />
-                      PDF
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </AppLayout>
-  );
+                </div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="h-[50px] w-full max-w-xl rounded-full bg-[#ececf0] p-1">
+                        {['overview', 'analytics', 'generated'].map((tab) => (
+                            <TabsTrigger
+                                key={tab}
+                                value={tab}
+                                className="flex-1 rounded-full text-sm capitalize data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                            >
+                                {tab === 'generated' ? 'Generated Reports' : tab}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+
+                    <TabsContent value="overview" className="mt-6">
+                        <ReportsOverviewTab stats={safeOverviewStats} recentReports={recentReports} />
+                    </TabsContent>
+
+                    <TabsContent value="analytics" className="mt-6">
+                        <ReportsAnalyticsTab data={safeAnalytics} />
+                    </TabsContent>
+
+                    <TabsContent value="generated" className="mt-6">
+                        <ReportsGeneratedTab reports={generatedReports} />
+                    </TabsContent>
+                </Tabs>
+            </div>
+
+            <ReportGenerator open={showGenerator} onClose={() => setShowGenerator(false)} templates={templates} students={students} />
+        </AppLayout>
+    );
 }

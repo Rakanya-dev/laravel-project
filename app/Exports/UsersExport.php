@@ -25,7 +25,7 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping
     public function collection()
     {
         // Fetch the users based on the type, including their daycare name
-        return User::where('account_type', $this->userType)
+        return User::where('role', $this->userType)
             ->with('daycare:id,name')
             ->get();
     }
@@ -55,16 +55,15 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping
     */
     public function map($user): array
     {
-        // This formats each row of data
         return [
             $user->id,
             $user->first_name,
             $user->middle_name,
             $user->last_name,
             $user->email,
-            $user->contact_number,
-            $user->daycare ? $user->daycare->name : 'N/A', // Safely get daycare name
-            ucfirst($user->status), // Capitalize the status
+            $user->phone,
+            $user->daycare ? $user->daycare->name : 'N/A',
+            ucfirst($user->status),
         ];
     }
 }

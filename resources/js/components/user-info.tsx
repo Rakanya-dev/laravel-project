@@ -6,8 +6,11 @@ export function UserInfo({ user, showEmail = false }: { user: User; showEmail?: 
     const getInitials = useInitials();
 
     const fullName = `${user.first_name ?? ''} ${user.middle_name ?? ''} ${user.last_name ?? ''}`.trim();
-    const initials = getInitials(user.first_name, user.middle_name, user.last_name);
-
+    const initials = getInitials(
+        user.first_name ?? undefined,
+        user.middle_name ?? undefined,
+        user.last_name ?? undefined
+    );
     return (
         <>
             <Avatar className="h-8 w-8 overflow-hidden rounded-full">

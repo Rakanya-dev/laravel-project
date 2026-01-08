@@ -36,15 +36,12 @@ class AuthenticatedSessionController extends Controller
 
         switch ($user->role) {
             case 'admin':
-                return redirect()->intended(route('admin.dashboard'));
+                return redirect()->route('admin.dashboard');
             case 'teacher':
-                return redirect()->intended(route('teacher.dashboard'));
+                return redirect()->route('teacher.dashboard');
             case 'parent':
-                return redirect()->intended(route('parent.dashboard'));
+                return redirect()->route('parent.dashboard');
             default:
-                // --- THIS IS YOUR ERROR ---
-                // You are logged in, but your user's role is NOT
-                // 'admin', 'teacher', or 'parent'.
                 abort(403, 'Unauthorized account type');
         }
     }

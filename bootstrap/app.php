@@ -1,5 +1,5 @@
 <?php
-
+use App\Http\Middleware\EnsureUserIsActive; // Import your middleware
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -23,8 +23,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'role.redirect' => \App\Http\Middleware\RedirectBasedOnRole::class,
+            'user.active' => EnsureUserIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
-    })->create();
+    })
+
+    ->withProviders([
+        Maatwebsite\Excel\ExcelServiceProvider::class,
+    ])
+
+    ->create();

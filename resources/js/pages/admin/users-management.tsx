@@ -1,63 +1,78 @@
 import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem, User as InertiaUser } from '@/types'; // Make sure this file is updated!
-import type { PageProps } from '@inertiajs/inertia';
-import { Head, usePage, router } from '@inertiajs/react'; // Use router
+import { BreadcrumbItem, User as InertiaUser } from '@/types';
+import type { PageProps } from '@inertiajs/core';
+import { Head, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 
-// Import your components
-import AdminUserManagement, {
-    User as ComponentUser,
-} from '@/components/admin-users-management';
-import { NewTeacher } from '@/components/ui/add-teacher-dialog';
+import { NewTeacher } from '@/components/admin/add-teacher-dialog';
+import AdminUserManagement, { User as ComponentUser } from '@/components/admin/admin-users-management';
 
 const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Dashboard', href: '/admin/dashboard' },
     { title: 'Users Management', href: '/admin/users-management' },
 ];
 
+interface PendingRequest {
+    link_id: number;
+    parent_id: number;
+    parent_first: string;
+    parent_last: string;
+    parent_email: string;
+    child_first: string;
+    child_last: string;
+    created_at: string;
+}
+
 export default function UsersManagement() {
-    // 1. Get Inertia props
-    type UsersManagementPageProps = PageProps & {
-        teachers: { data: InertiaUser[]; meta: any };
-        parents: { data: InertiaUser[]; meta: any };
-        daycares: { id: number; name: string }[]; // The new schema sends 'name'
+    type ExtendedUser = InertiaUser & {
+        students?: { first_name: string; last_name: string }[];
     };
-    const { teachers, parents, daycares } =
-        usePage<UsersManagementPageProps>().props;
+
+    type UsersManagementPageProps = PageProps & {
+        teachers: { data: ExtendedUser[]; meta: any };
+        parents: { data: ExtendedUser[]; meta: any };
+        daycares: { id: number; name: string }[];
+        pendingRequests: PendingRequest[];
+    };
+
+    const { teachers, parents, daycares, pendingRequests } = usePage<UsersManagementPageProps>().props;
 
     // 2. Transform data
-    // --- FIX: Use 'name' from your new Daycare model ---
-    const daycareList = daycares.map((d) => d.name); // Changed
+    const daycareList = daycares.map((d) => d.name);
 
-    const mapUser = (user: InertiaUser): ComponentUser => ({
-        id: user.id,
-        firstName: user.first_name,
-        middleName: user.middle_name || '',
-        lastName: user.last_name,
-        email: user.email,
-        // --- FIX: Use 'phone' and 'role' from new User model ---
-        phone: user.phone || '', // Changed
-        daycare: user.daycare?.name || '-', // Changed
-        status: user.status || 'active',
-        role: user.role, // Changed
-    });
+    const mapUser = (user: ExtendedUser): ComponentUser => {
+        const childName =
+            user.students && user.students.length > 0 ? `${user.students[0].first_name} ${user.students[0].last_name}` : 'No Child Linked';
+
+        return {
+            id: user.id,
+            firstName: user.first_name,
+            middleName: user.middle_name || '',
+            lastName: user.last_name,
+            email: user.email,
+            phone: user.phone || '',
+            daycare: user.daycare?.name || '-',
+            status: user.status || 'active',
+            role: user.role,
+            childName: childName,
+        };
+    };
 
     const mappedTeachers = teachers.data.map(mapUser);
     const mappedParents = parents.data.map(mapUser);
 
     // 4. Implement action handlers
-
     const onAddTeacher = (teacher: NewTeacher) => {
         const daycare = daycares.find((d) => d.name === teacher.daycare);
 
-        // --- FIX: Send 'phone' instead of 'contact_number' ---
-        router.post( // Use router
+        router.post(
             route('admin.teachers.store'),
             {
                 first_name: teacher.firstName,
                 middle_name: teacher.middleName,
                 last_name: teacher.lastName,
                 email: teacher.email,
-                phone: teacher.phone, // Changed
+                phone: teacher.phone,
                 password: teacher.password,
                 password_confirmation: teacher.password_confirmation,
                 daycare_id: daycare?.id,
@@ -66,7 +81,7 @@ export default function UsersManagement() {
                 onSuccess: () => toast.success('Teacher added successfully.'),
                 onError: (e) => {
                     console.error(e);
-                    toast.error('Failed to add teacher. Check console for details.');
+                    toast.error('Failed to add teacher.');
                 },
                 preserveScroll: true,
             },
@@ -76,58 +91,53 @@ export default function UsersManagement() {
     const onEditUser = (user: ComponentUser) => {
         const daycare = daycares.find((d) => d.name === user.daycare);
 
-        // --- FIX: Send 'phone' instead of 'contact_number' ---
-        router.patch( // Use router
+        router.patch(
             route('admin.users.update', user.id),
             {
                 first_name: user.firstName,
                 middle_name: user.middleName,
                 last_name: user.lastName,
                 email: user.email,
-                phone: user.phone, // Changed
+                phone: user.phone,
                 daycare_id: daycare?.id,
             },
             {
                 onSuccess: () => toast.success('User updated successfully.'),
                 onError: (e) => {
                     console.error(e);
-                    toast.error('Failed to update user. Check console for details.');
+                    toast.error('Failed to update user.');
                 },
                 preserveScroll: true,
             },
         );
     };
-
-    const onApproveParent = (parentId: number) => {
-        router.post( // Use router
-            route('admin.users.approve', parentId),
+    const onApproveRequest = (linkId: number) => {
+        router.post(
+            route('admin.users.approve', linkId),
             {},
             {
                 onSuccess: () => toast.success('Parent approved.'),
-                onError: () => toast.error('Failed to approve parent.'),
+                onError: () => toast.error('Failed to approve.'),
                 preserveScroll: true,
             },
         );
     };
 
-    const onRejectParent = (parentId: number) => {
-        router.post( // Use router
-            route('admin.users.reject', parentId),
+    const onRejectRequest = (linkId: number) => {
+        router.post(
+            route('admin.users.reject', linkId),
             {},
             {
-                onSuccess: () => toast.success('Parent rejected.'),
-                onError: () => toast.error('Failed to reject parent.'),
+                onSuccess: () => toast.success('Request rejected.'),
+                onError: () => toast.error('Failed to reject.'),
                 preserveScroll: true,
             },
         );
     };
 
     const onDeleteUser = (userId: number, userType: 'teachers' | 'parents') => {
-        router.delete(route('admin.users.destroy', userId), { // Use router.delete
-            onSuccess: () =>
-                toast.success(
-                    `${userType === 'teachers' ? 'Teacher' : 'Parent'} deleted.`,
-                ),
+        router.delete(route('admin.users.destroy', userId), {
+            onSuccess: () => toast.success(`${userType === 'teachers' ? 'Teacher' : 'Parent'} deleted.`),
             onError: () => toast.error('Failed to delete user.'),
             preserveScroll: true,
         });
@@ -138,7 +148,6 @@ export default function UsersManagement() {
         toast.info(`Exporting ${userType} data...`);
     };
 
-    // 5. Render the page
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Users Management" />
@@ -147,12 +156,13 @@ export default function UsersManagement() {
                 <AdminUserManagement
                     teachers={mappedTeachers}
                     parents={mappedParents}
+                    pendingRequests={pendingRequests}
                     daycareList={daycareList}
                     onAddTeacher={onAddTeacher}
                     onEditParent={onEditUser}
                     onEditTeacher={onEditUser}
-                    onApproveParent={onApproveParent}
-                    onRejectParent={onRejectParent}
+                    onApproveRequest={onApproveRequest}
+                    onRejectRequest={onRejectRequest}
                     onDeleteUser={onDeleteUser}
                     onExportData={onExportData}
                 />

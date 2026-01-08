@@ -6,45 +6,37 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+// 1. Import Logging Classes
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    // 2. Add LogsActivity Trait
+    use HasFactory, Notifiable, SoftDeletes, LogsActivity;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'first_name',
         'middle_name',
         'last_name',
         'email',
-        'contact_number',
+        'phone',
+        'role',
         'password',
-        'account_type',
         'status',
         'daycare_id',
     ];
 
-
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -53,32 +45,47 @@ class User extends Authenticatable
         ];
     }
 
-    public function getFullNameAttribute(): string
+    // 3. Define Logging Options
+    public function getActivitylogOptions(): LogOptions
     {
-        return trim("{$this->first_name} {$this->middle_name} {$this->last_name}");
+        return LogOptions::defaults()
+            // Log these fields when they change
+            ->logOnly(['first_name', 'last_name', 'email', 'role', 'status', 'daycare_id'])
+            // Only create a log if the value actually changed
+            ->logOnlyDirty()
+            // Prevent empty logs if nothing changed
+            ->dontSubmitEmptyLogs()
+            // Custom description: "User account has been updated"
+            ->setDescriptionForEvent(fn(string $eventName) => "User account has been {$eventName}");
     }
 
+    public function getFullNameAttribute(): string
+    {
+        return implode(' ', array_filter([$this->first_name, $this->middle_name, $this->last_name]));
+    }
 
     public function isAdmin()
     {
-        return $this->account_type === 'admin';
+        return $this->role === 'admin';
     }
-
     public function isTeacher()
     {
-        return $this->account_type === 'teacher';
+        return $this->role === 'teacher';
     }
-
     public function isParent()
     {
-        return $this->account_type === 'parent';
+        return $this->role === 'parent';
     }
-
-
-    public function daycare()
+    public function daycare(): BelongsTo
     {
         return $this->belongsTo(Daycare::class);
     }
-
-
+    public function students()
+    {
+        return $this->belongsToMany(Student::class, 'student_parent', 'parent_id', 'student_id')->withPivot('relationship', 'is_primary');
+    }
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'recipient_id');
+    }
 }

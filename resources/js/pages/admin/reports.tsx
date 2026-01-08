@@ -1,162 +1,134 @@
+import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
-import { type BreadcrumbItem } from '@/types';
-import { useState } from 'react';
-import { Dialog } from '@headlessui/react';
+import { FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Reports', href: '/admin/reports' },
-];
+import { ReportsOverviewTab } from '@/components/reports/reports-overview-tab';
+import { ReportsAnalyticsTab } from '@/components/reports/reports-analytics-tab';
+import { ReportsTemplatesTab } from '@/components/reports/reports-templates-tab';
+import { ReportsExportsTab } from '@/components/reports/reports-exports-tab';
+import { ReportsGeneratedTab } from '@/components/reports/reports-generated-tab';
+import { ReportGenerator } from '@/components/reports/report-generator';
 
-const reportStats = [
-    { label: 'Monthly Assessments', value: 42 },
-    { label: 'Withdrawn Children', value: 8 },
-    { label: 'Generated Reports', value: 67 },
-];
+interface ReportsPageProps {
+    overviewStats: any;
+    analytics: any;
+    recentReports: any[];
+    generatedReports: any[];
+    templates: any[];
+    students: any[];
+    exportCounts: Record<string, number>;
+}
 
-const reports = [
-    {
-        title: 'March 2025 Assessment Report',
-        type: 'Assessment',
-        date: '2025-03-31',
-        generatedBy: 'Teacher Mary Cruz',
-    },
-    {
-        title: 'Withdrawn Children - Q1',
-        type: 'Withdrawal',
-        date: '2025-04-10',
-        generatedBy: 'Admin',
-    },
-    {
-        title: 'Daycare Activity Report',
-        type: 'Activity',
-        date: '2025-05-01',
-        generatedBy: 'Teacher Brian Flores',
-    },
-];
+export default function Reports({
+    overviewStats,
+    analytics,
+    recentReports,
+    generatedReports = [],
+    templates,
+    students,
+    exportCounts = {}
+}: ReportsPageProps) {
+    const [activeTab, setActiveTab] = useState('overview');
+    const [showGenerator, setShowGenerator] = useState(false);
 
-export default function AdminReports() {
-    const [isOpen, setIsOpen] = useState(false);
-    const [reportType, setReportType] = useState('Assessment');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [preSelectedTemplateId, setPreSelectedTemplateId] = useState<string | undefined>(undefined);
 
-    const handleGenerate = () => {
-        // Placeholder for backend submission
-        console.log({ reportType, startDate, endDate });
-        setIsOpen(false);
+    const safeGeneratedReports = generatedReports || [];
+    const safeRecentReports = recentReports || [];
+    const safeTemplates = templates || [];
+    const safeStudents = students || [];
+
+    const safeAnalytics = analytics || {
+        monthlyTrends: [],
+        domainPerformance: [],
+        outcomeDistribution: []
+    };
+
+    const safeOverviewStats = overviewStats || {
+        total: 0,
+        uniqueChildren: 0,
+        avgScore: 0,
+        completionRate: 0,
+        growth: 0
+    };
+
+    const handleUseTemplate = (template: any) => {
+        setPreSelectedTemplateId(String(template.id));
+        setShowGenerator(true);
+    };
+
+    const handleCreateNew = () => {
+        setPreSelectedTemplateId(undefined);
+        setShowGenerator(true);
     };
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Reports" />
+        <AppLayout breadcrumbs={[{ title: 'Reports & Analytics', href: '/admin/reports' }]}>
+            <Head title="Reports & Analytics" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Reports Overview</h2>
-                    <button
-                        onClick={() => setIsOpen(true)}
-                        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                    >
-                        + Generate Report
-                    </button>
-                </div>
-
-                {/* Top Report Stats */}
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    {reportStats.map((stat, index) => (
-                        <div
-                            key={index}
-                            className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border bg-white dark:bg-neutral-900 p-4 shadow-sm"
-                        >
-                            <h3 className="text-sm text-neutral-500 dark:text-neutral-400">{stat.label}</h3>
-                            <p className="text-2xl font-semibold text-neutral-800 dark:text-neutral-100">{stat.value}</p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Recent Reports Table */}
-                <div className="rounded-xl border border-sidebar-border/70 dark:border-sidebar-border overflow-hidden">
-                    <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-700">
-                        <thead className="bg-neutral-100 dark:bg-neutral-800">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-600 dark:text-neutral-300">Title</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-600 dark:text-neutral-300">Type</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-600 dark:text-neutral-300">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-600 dark:text-neutral-300">Generated By</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700 bg-white dark:bg-neutral-900">
-                            {reports.map((report, index) => (
-                                <tr key={index}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-800 dark:text-neutral-100">{report.title}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-300">{report.type}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-300">{report.date}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-600 dark:text-neutral-300">{report.generatedBy}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Modal for Generating Report */}
-                <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-50">
-                    <div className="fixed inset-0 bg-black/40" aria-hidden="true" />
-                    <div className="fixed inset-0 flex items-center justify-center p-4">
-                        <Dialog.Panel className="w-full max-w-md rounded-lg bg-white dark:bg-neutral-900 p-6 shadow-xl">
-                            <Dialog.Title className="text-lg font-semibold mb-4">Generate Report</Dialog.Title>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium mb-1 dark:text-white">Report Type</label>
-                                    <select
-                                        value={reportType}
-                                        onChange={(e) => setReportType(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-sm"
-                                    >
-                                        <option>Assessment</option>
-                                        <option>Withdrawal</option>
-                                        <option>Activity</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1 dark:text-white">Start Date</label>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-sm"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium mb-1 dark:text-white">End Date</label>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="mt-6 flex justify-end gap-2">
-                                <button
-                                    onClick={() => setIsOpen(false)}
-                                    className="rounded-md border border-gray-300 bg-white dark:bg-neutral-800 px-4 py-2 text-sm text-gray-700 dark:text-white"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleGenerate}
-                                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                                >
-                                    Generate
-                                </button>
-                            </div>
-                        </Dialog.Panel>
+                    <div>
+                        <h2 className="text-black text-2xl font-semibold">Reports & Analytics</h2>
+                        <p className="text-neutral-600">Comprehensive reporting and data analysis tools</p>
                     </div>
-                </Dialog>
+                    <Button
+                        className="bg-[#6366f1] hover:bg-[#4f46e5]"
+                        onClick={handleCreateNew}
+                    >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Create New Report
+                    </Button>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="bg-[#ececf0] p-1 h-[50px] w-full max-w-4xl rounded-full">
+                        {['overview', 'analytics', 'generated', 'templates', 'exports'].map(tab => (
+                            <TabsTrigger
+                                key={tab}
+                                value={tab}
+                                className="flex-1 rounded-full text-sm capitalize data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                            >
+                                {tab === 'generated' ? 'Generated Reports' : tab}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+
+                    <TabsContent value="overview" className="mt-6">
+                        <ReportsOverviewTab stats={safeOverviewStats} recentReports={safeRecentReports} />
+                    </TabsContent>
+
+                    <TabsContent value="analytics" className="mt-6">
+                        <ReportsAnalyticsTab data={safeAnalytics} />
+                    </TabsContent>
+
+                    <TabsContent value="generated" className="mt-6">
+                        <ReportsGeneratedTab reports={safeGeneratedReports} />
+                    </TabsContent>
+
+                    <TabsContent value="templates" className="mt-6">
+                        <ReportsTemplatesTab
+                            initialTemplates={safeTemplates}
+                            onUseTemplate={handleUseTemplate}
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="exports" className="mt-6">
+                        <ReportsExportsTab counts={exportCounts} />
+                    </TabsContent>
+                </Tabs>
             </div>
+
+            <ReportGenerator
+                open={showGenerator}
+                onClose={() => setShowGenerator(false)}
+                templates={safeTemplates}
+                students={safeStudents}
+                initialTemplateId={preSelectedTemplateId}
+            />
         </AppLayout>
     );
 }

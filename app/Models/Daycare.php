@@ -3,28 +3,53 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Daycare extends Model
 {
-    //
+    use SoftDeletes;
+
+    // --- 1. CORRECT FILLABLE FIELDS (Matches Final Migration) ---
     protected $fillable = [
-        'daycare_name',
+        'name',
         'address',
-        'contact_person',
-        'contact_number',
+        'city',
+        'province',
+        'postal_code',
+        'phone',
+        'email',
+        'principal_name',
+        'license_number',
+        'capacity',
+        'current_enrollment',
+        'status',
+        'established_date',
+        'description',
     ];
 
-    protected $appends = ['name'];
+    protected $casts = [
+        'established_date' => 'date',
+        'capacity' => 'integer',
+        'current_enrollment' => 'integer',
+    ];
 
-    public function getNameAttribute()
+    // --- 2. RELATIONSHIPS (Required by Controllers) ---
+
+    /**
+     * Get the users (teachers/parents/admin) associated with the daycare.
+     */
+    public function users(): HasMany
     {
-        return $this->daycare_name;
+        return $this->hasMany(User::class);
     }
 
-    public function children()
-{
-    return $this->hasMany(Child::class);
-}
+    /**
+     * Get the students enrolled in the daycare.
+     */
+    public function children(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
 
 }
