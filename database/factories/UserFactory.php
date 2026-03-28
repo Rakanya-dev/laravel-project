@@ -28,11 +28,13 @@ class UserFactory extends Factory
             'middle_name' => $this->faker->optional()->firstName,
             'last_name' => $this->faker->lastName,
             'email' => $this->faker->unique()->safeEmail,
-            'phone' => $this->faker->phoneNumber,
             'email_verified_at' => now(),
             'password' => bcrypt('password'),
-            'remember_token' => Str::random(10),
+            'phone' => $this->faker->phoneNumber,
             'role' => 'parent',
+            'status' => 'Active',
+            'daycare_id' => null,
+            'remember_token' => Str::random(10),
         ];
 
     }
