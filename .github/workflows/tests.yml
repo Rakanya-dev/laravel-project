@@ -70,3 +70,4 @@ jobs:
           DB_DATABASE: laravel_test
           DB_USERNAME: root
           DB_PASSWORD: root
+          MAIL_MAILER: log
