@@ -6,40 +6,86 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Student } from '@/pages/admin/student-management';
-import { Archive, CheckSquare, Download, Edit2, FileText, MoreVertical, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react';
+import { Archive, Download, Edit2, FileText, MoreVertical, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 
-interface StudentListViewProps {
-    paginatedStudents: Student[];
-    filteredStudents: Student[];
+// 🚀 IMPORT NEW DATE TOOLKIT
+import { formatPHDate } from '@/utils/date';
+
+export interface BaseStudent {
+    id: number;
+    firstName: string;
+    middleName?: string; // Teacher page might send this
+    lastName: string;
+    status: string;
+    archived: boolean;
+    dateOfBirth?: string;
+
+    // Teacher Specific (Make them optional in Base!)
+    age?: number;
+    section_name?: string;
+    assessmentStatus?: 'Completed' | 'In Progress' | 'Draft' | 'Not Started';
+    score?: number;
+    canGraduate?: boolean;
+    lastAssessment?: string;
+
+    // Admin Specific
+    daycare?: string;
+    parentLinked?: boolean;
+    parentName?: string;
+    parentEmail?: string;
+
+    [key: string]: any;
+}
+
+interface StudentListViewProps<T extends BaseStudent> {
+    role: 'admin' | 'teacher';
+    paginatedStudents: T[];
+    filteredStudents: T[];
     selectedStudents: Set<number>;
     currentPage: number;
     totalPages: number;
     searchQuery: string;
-    filterDaycare: string;
+    itemsPerPage: number;
+
+    // Filter States
+    filterDaycare?: string;
+    filterSection?: string;
     filterStatus: string;
-    daycareList: string[];
+    filterAssessment?: string;
+    daycareList?: string[];
+    sectionList?: string[];
+
+    // Filter Handlers
     onSearchChange: (value: string) => void;
-    onDaycareChange: (value: string) => void;
+    onDaycareChange?: (value: string) => void;
+    onSectionChange?: (value: string) => void;
     onStatusChange: (value: string) => void;
+    onAssessmentChange?: (value: string) => void;
     onClearFilters: () => void;
     onPageChange: (page: number) => void;
+
+    // Selection Handlers
     onToggleAll: () => void;
     onToggleStudent: (id: number) => void;
+    onCancelSelection: () => void;
 
-    // Actions
-    onOpenAdd: () => void;
-    onOpenImport: () => void;
+    // Global Actions
+    onOpenBulkArchive: () => void;
     onOpenArchived: () => void;
     onExport: () => void;
+    onOpenAdd?: () => void;
+    onOpenImport?: () => void;
+    onNewAssessment?: (id?: number) => void;
+    onConsolidatedReport?: () => void;
+    onAnalysisReport?: () => void;
 
-    // Row Actions
-    onOpenDetail: (student: Student) => void;
-    onOpenEdit: (student: Student) => void;
-    onOpenArchive: (student: Student) => void;
+    // Row Actions - using 'T' here!
+    onOpenDetail: (student: T) => void;
+    onOpenEdit: (student: T) => void;
+    onOpenArchive: (student: T) => void;
     onDelete: (id: number) => void;
-    onOpenBulkArchive: () => void;
-    itemsPerPage: number;
+    onGraduate?: (student: T) => void;
+    onProgressReport?: (student: T) => void;
 }
 
 const getStatusBadge = (status: string) => {
@@ -47,9 +93,15 @@ const getStatusBadge = (status: string) => {
         case 'Active':
             return <Badge className="rounded-lg border-[#baf7d1] bg-green-50 px-3 py-1 text-[13px] text-[#27815f] hover:bg-green-50">Active</Badge>;
         case 'Graduated':
-            return <Badge className="rounded-lg border-purple-50 bg-[#f4e9fe] px-3 py-1 text-[13px] text-[#9846dd] hover:bg-[#f4e9fe]">Graduated</Badge>;
+            return (
+                <Badge className="rounded-lg border-purple-50 bg-[#f4e9fe] px-3 py-1 text-[13px] text-[#9846dd] hover:bg-[#f4e9fe]">Graduated</Badge>
+            );
         case 'Transferred':
-            return <Badge className="rounded-lg border-[#d7e9fd] bg-[#eff6fe] px-3 py-1 text-[13px] text-[#4b7ae8] hover:bg-[#eff6fe]">Transferred</Badge>;
+            return (
+                <Badge className="rounded-lg border-[#d7e9fd] bg-[#eff6fe] px-3 py-1 text-[13px] text-[#4b7ae8] hover:bg-[#eff6fe]">
+                    Transferred
+                </Badge>
+            );
         case 'Inactive':
             return <Badge className="rounded-lg border-[#f3f4f5] bg-gray-50 px-3 py-1 text-[13px] text-[#697280] hover:bg-gray-50">Inactive</Badge>;
         default:
@@ -57,14 +109,7 @@ const getStatusBadge = (status: string) => {
     }
 };
 
-const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const utcDate = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    return utcDate.toLocaleDateString('en-US', { timeZone: 'UTC' });
-};
-
-export function StudentListView({
+export function StudentListView<T extends BaseStudent>({
     paginatedStudents,
     filteredStudents,
     selectedStudents,
@@ -90,8 +135,10 @@ export function StudentListView({
     onOpenArchive,
     onDelete,
     onOpenBulkArchive,
+    onGraduate,
+    onProgressReport,
     itemsPerPage,
-}: StudentListViewProps) {
+}: StudentListViewProps<T>) {
     const totalItems = filteredStudents.length;
 
     return (
@@ -113,28 +160,6 @@ export function StudentListView({
                     </Button>
                 </div>
             </div>
-
-            {/* Bulk Actions Bar */}
-            {selectedStudents.size > 0 && (
-                <Card className="border-blue-200 bg-blue-50">
-                    <CardContent className="flex items-center justify-between py-3">
-                        <div className="flex items-center gap-2">
-                            <CheckSquare className="size-5 text-blue-600" />
-                            <span className="text-[14px]">{selectedStudents.size} student(s) selected</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={onOpenBulkArchive}>
-                                <Archive className="mr-2 size-4" />
-                                Archive Selected
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => onToggleStudent(0)}>
-                                Clear Selection
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
             <Card>
                 {/* Search and Filter Bar */}
                 <div className="border-b px-6 pt-6 pb-4">
@@ -155,8 +180,10 @@ export function StudentListView({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Daycares</SelectItem>
-                                {daycareList.map((daycare) => (
-                                    <SelectItem key={daycare} value={daycare}>{daycare}</SelectItem>
+                                {daycareList?.map((daycare) => (
+                                    <SelectItem key={daycare} value={daycare}>
+                                        {daycare}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -179,15 +206,31 @@ export function StudentListView({
                                 <RefreshCw className="mr-2 size-4" />
                             </Button>
                         )}
-
-                        {/* 2. CONSOLIDATED ACTIONS */}
-                        <div className="flex gap-2 pl-2 border-l ml-2">
-                            <Button variant="outline" onClick={onOpenImport}>
-                                <Upload className="mr-2 h-4 w-4" /> Import
-                            </Button>
-                            <Button onClick={onOpenAdd} className="bg-black text-white hover:bg-black/90">
-                                <Plus className="mr-2 h-4 w-4" /> Add Child
-                            </Button>
+                        {/* Right Side: Actions */}
+                        <div className="flex w-full items-center gap-2 sm:w-auto">
+                            {/* 🚀 THE MAGIC TRIGGER: If boxes are checked, show Bulk Archive! */}
+                            {selectedStudents.size > 0 ? (
+                                <div className="animate-in fade-in zoom-in duration-200">
+                                    <Button
+                                        variant="destructive"
+                                        onClick={onOpenBulkArchive}
+                                        className="bg-red-600 text-white shadow-md hover:bg-red-700"
+                                    >
+                                        <Archive className="mr-2 h-4 w-4" />
+                                        Archive {selectedStudents.size} Selected
+                                    </Button>
+                                </div>
+                            ) : (
+                                /* Otherwise, show the normal Add & Export buttons */
+                                <>
+                                    <Button variant="outline" onClick={onExport} className="bg-white">
+                                        <Download className="mr-2 h-4 w-4" /> Export
+                                    </Button>
+                                    <Button onClick={onOpenAdd} className="bg-indigo-600 text-white hover:bg-indigo-700">
+                                        <Plus className="mr-2 h-4 w-4" /> Add Student
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -229,7 +272,7 @@ export function StudentListView({
                                         <TableCell className="cursor-pointer font-medium hover:text-blue-600" onClick={() => onOpenDetail(student)}>
                                             {`${student.firstName} ${student.middleName || ''} ${student.lastName}`.trim()}
                                         </TableCell>
-                                        <TableCell className="text-neutral-500">{formatDateForDisplay(student.dateOfBirth)}</TableCell>
+                                        <TableCell className="text-neutral-500">{formatPHDate(student.dateOfBirth)}</TableCell>
                                         <TableCell className="text-neutral-500">{student.daycare}</TableCell>
                                         <TableCell>
                                             {student.parentLinked ? (

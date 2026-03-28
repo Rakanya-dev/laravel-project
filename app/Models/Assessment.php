@@ -8,13 +8,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-// 👇 1. Import Logging Classes
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
 class Assessment extends Model
 {
-    // 👇 2. Add LogsActivity
     use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
@@ -23,13 +21,17 @@ class Assessment extends Model
         'daycare_id',
         'assessment_date',
         'assessment_type',
+        'form_type', // 👈 ADDED to match migration
         'status',
         'school_year',
         'semester',
+
+        // Scores
         'overall_score',
+        'sum_of_scaled', // 👈 ADDED to match migration
         'overall_rating',
-        'overall_notes',
-        'recommendations',
+
+        // Notes & Dates
         'next_assessment_date',
         'teacher_comments',
         'strengths',
@@ -49,29 +51,31 @@ class Assessment extends Model
         'overall_score' => 'decimal:2',
     ];
 
-    // 👇 3. Define Logging Options
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['status', 'overall_score', 'overall_rating', 'recommendations'])
+            // 👇 REMOVED 'recommendations' to prevent Spatie crashes
+            ->logOnly(['status', 'overall_score', 'overall_rating'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn(string $eventName) => "Assessment record has been {$eventName}");
     }
 
-    // ... (Existing Relationships) ...
     public function scores(): HasMany
     {
         return $this->hasMany(AssessmentScore::class, 'assessment_id');
     }
+
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
     }
+
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
+
     public function daycare(): BelongsTo
     {
         return $this->belongsTo(Daycare::class);

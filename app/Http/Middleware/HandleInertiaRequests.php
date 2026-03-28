@@ -6,6 +6,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
+use App\Models\Daycare;
+use Illuminate\Support\Facades\Cache; // 🚀 ADDED THIS IMPORT
 
 class HandleInertiaRequests extends Middleware
 {
@@ -41,21 +43,48 @@ class HandleInertiaRequests extends Middleware
 
         $user = $request->user();
 
+        // 🚀 THE FIX: Tell the cache this user is online right now!
+        if ($user) {
+            Cache::put(
+                'user-is-online-' . $user->id,
+                true,
+                now()->addMinutes(2) // They are "online" for 2 mins after their last click
+            );
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
+
             'auth' => [
-                'user' => $user,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'avatar' => $user->profile_photo_url ?? $user->profile_photo_path ?? null,
+
+                    'daycare' => function () use ($request) {
+                        if ($request->user() && $request->user()->daycare_id) {
+                            return Daycare::select('id', 'name')
+                                ->find($request->user()->daycare_id);
+                        }
+                        return null;
+                    },
+                ] : null,
             ],
 
-            // Fixed: Use nullsafe operator (?->) to check if user and daycare exist
-            'daycare' => $user?->daycare ? [
-                'id' => $user->daycare->id,
-                'name' => $user->daycare->name,
-            ] : null,
+            'flash' => [
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+                'new_access_code' => fn() => $request->session()->get('new_access_code'),
+                'student_name' => fn() => $request->session()->get('student_name'),
+            ],
 
-            'ziggy' => fn (): array => [
+            'ziggy' => fn(): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ]

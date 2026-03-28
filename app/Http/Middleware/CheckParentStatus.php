@@ -21,10 +21,10 @@ class CheckParentStatus
         // 1. Safety check: ensure user is logged in and is a parent
         if ($user && $user->role === 'parent') {
 
-            // 2. If status is NOT active...
-            if ($user->status !== 'active') {
+            // 2. FIX: Make the status check case-insensitive!
+            if (strtolower($user->status) !== 'active') {
 
-                // ...redirect them to the waiting room.
+                // ...redirect them to the waiting room if suspended/inactive
                 return redirect()->route('approval.notice');
             }
         }

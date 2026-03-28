@@ -47,9 +47,18 @@ class Daycare extends Model
     /**
      * Get the students enrolled in the daycare.
      */
-    public function children(): HasMany
+    public function students(): HasMany
     {
         return $this->hasMany(Student::class);
     }
+    public function sections()
+    {
+        return $this->hasMany(Section::class);
+    }
 
+    // Add this to Daycare.php
+    public function teachers(): HasMany
+    {
+        return $this->hasMany(User::class)->where('role', 'teacher');
+    }
 }

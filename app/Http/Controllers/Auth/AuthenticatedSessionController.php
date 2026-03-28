@@ -31,7 +31,7 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
         $request->session()->regenerate();
-
+        $request->user()->update(['last_login_at' => now()]);
         $user = $request->user();
 
         switch ($user->role) {

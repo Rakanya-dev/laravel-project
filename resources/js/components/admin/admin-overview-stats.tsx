@@ -1,6 +1,13 @@
-import { Users, Building2, GraduationCap, ClipboardList, TrendingUp, LucideIcon } from 'lucide-react';
+import {
+    Building2,
+    ClipboardList,
+    MessageSquare,
+    ShieldCheck,
+    TrendingUp,
+    LucideIcon,
+    BellRing
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-
 
 interface Stat {
     title: string;
@@ -10,65 +17,61 @@ interface Stat {
     color: string;
     bgColor: string;
     iconColor: string;
+    objectiveLabel: string;
 }
 
+// 🚀 UPDATED: Props tailored specifically for the Kidtrak System objectives
 interface AdminOverviewStatsProps {
-    totalUsers: number;
-    activeUsers: number;
-    activeDaycares: number;
-    totalDaycares: number;
-    totalStudents: number;
-    activeStudents: number;
-    totalAssessments: number;
-    completedAssessments: number;
+    totalLearners: number;       // For Obj A: Digital tracking
+    activeLearners: number;
+    totalAssessments: number;    // For Obj B: Analytics & milestones
+    reportsGenerated: number;
+    unreadMessages: number;      // For Obj C: Messaging & alerts
+    totalCenters: number;        // For Obj D: System management
+    activeStaff: number;
 }
 
 export default function AdminOverviewStats({
-    totalUsers,
-    activeUsers,
-    activeDaycares,
-    totalDaycares,
-    totalStudents,
-    activeStudents,
-    totalAssessments,
-    completedAssessments
+    totalLearners = 0,
+    activeLearners = 0,
+    totalAssessments = 0,
+    reportsGenerated = 0,
+    unreadMessages = 0,
+    totalCenters = 0,
+    activeStaff = 0
 }: AdminOverviewStatsProps) {
+
+    // Mapped strictly to Kidtrak Objectives A, B, C, and D
     const stats: Stat[] = [
         {
-            title: 'Total Users',
-            value: totalUsers.toString(),
-            change: `${activeUsers} Active`,
-            icon: Users,
-            color: 'bg-blue-500',
-            bgColor: 'bg-blue-50',
-            iconColor: 'text-blue-600'
+            title: 'Digital Profiles',
+            value: totalLearners.toString(),
+            change: `${activeLearners} Secured Active Records`,
+            icon: ShieldCheck,
+            color: 'bg-indigo-500',
+            bgColor: 'bg-indigo-50',
+            iconColor: 'text-indigo-600',
+            objectiveLabel: 'Digital Tracking' // Objective A
         },
         {
-            title: 'Active Daycares',
-            value: activeDaycares.toString(),
-            change: `${totalDaycares} Total`,
-            icon: Building2,
-            color: 'bg-green-500',
-            bgColor: 'bg-green-50',
-            iconColor: 'text-green-600'
-        },
-        {
-            title: 'Total Students',
-            value: totalStudents.toString(),
-            change: `${activeStudents} Active`,
-            icon: GraduationCap,
-            color: 'bg-purple-500',
-            bgColor: 'bg-purple-50',
-            iconColor: 'text-purple-600'
-        },
-        {
-            title: 'Assessments',
+            title: 'Assessment Analytics',
             value: totalAssessments.toString(),
-            change: `${completedAssessments} Completed`,
+            change: `${reportsGenerated} Progress Reports Generated`,
             icon: ClipboardList,
-            color: 'bg-orange-500',
-            bgColor: 'bg-orange-50',
-            iconColor: 'text-orange-600'
+            color: 'bg-emerald-500',
+            bgColor: 'bg-emerald-50',
+            iconColor: 'text-emerald-600',
+            objectiveLabel: 'Data-Driven' // Objective B
+        },
+        {
+            title: 'Managed Centers',
+            value: totalCenters.toString(),
+            change: `${activeStaff} CDW Accounts Managed`,
+            icon: Building2,
+            color: 'bg-violet-500',
+            bgColor: 'bg-violet-50',
+            iconColor: 'text-violet-600',
+            objectiveLabel: 'System Control' // Objective D
         }
     ];
 
@@ -77,21 +80,29 @@ export default function AdminOverviewStats({
             {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                    <Card key={index} className="relative overflow-hidden">
+                    <Card key={index} className="relative overflow-hidden shadow-sm border-slate-200 hover:border-slate-300 transition-colors group">
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-[11px] text-neutral-500 uppercase tracking-wider">
+                                    {/* Small objective tag above the title */}
+                                    <p className={`text-[9px] font-black uppercase tracking-widest ${stat.iconColor} opacity-80 mb-1`}>
+                                        {stat.objectiveLabel}
+                                    </p>
+
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                                         {stat.title}
                                     </p>
-                                    <p className="text-[32px] text-black -mt-1">{stat.value}</p>
-                                    <div className="flex items-center gap-1 text-[11px] text-green-600">
-                                        <TrendingUp className="size-3" strokeWidth={2.5} />
+                                    <p className="text-[32px] font-black text-slate-900 leading-tight -mt-1">
+                                        {stat.value}
+                                    </p>
+
+                                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 mt-2">
+                                        <TrendingUp className="size-3 text-emerald-500" strokeWidth={2.5} />
                                         <span>{stat.change}</span>
                                     </div>
                                 </div>
-                                <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                                    <Icon className={`size-5 ${stat.iconColor}`} strokeWidth={2} />
+                                <div className={`${stat.bgColor} p-3 rounded-xl transition-transform group-hover:scale-110 duration-300`}>
+                                    <Icon className={`size-6 ${stat.iconColor}`} strokeWidth={2} />
                                 </div>
                             </div>
                         </CardContent>

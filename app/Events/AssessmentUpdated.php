@@ -2,35 +2,36 @@
 
 namespace App\Events;
 
+use App\Models\Assessment;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // 👈 Use 'Now' for instant speed
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class AssessmentUpdated implements ShouldBroadcast
+// Changed to 'ShouldBroadcastNow' to skip the queue and update instantly
+class AssessmentUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $teacherId;
+    public $assessment;
 
-    /**
-     * Create a new event instance.
-     */
-    public function __construct($teacherId)
+    public function __construct(Assessment $assessment)
     {
-        $this->teacherId = $teacherId;
+        $this->assessment = $assessment;
     }
 
-    /**
-     * Get the channels the event should broadcast on.
-     */
     public function broadcastOn(): array
     {
+        // 👇 UPDATED: Broadcast to the whole daycare, not just one user
         return [
-            new PrivateChannel('App.Models.User.' . $this->teacherId),
+            new PrivateChannel('daycare.' . $this->assessment->daycare_id),
         ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'assessment.updated';
     }
 }

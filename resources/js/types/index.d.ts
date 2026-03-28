@@ -68,7 +68,8 @@ export interface Child {
     date_of_birth: string;
     gender: 'Male' | 'Female';
     admission_date: string;
-
+    profile_photo?: string | null;
+    section_id?: number | null; // 🚀 NEW: Add section_id to Child interface
     special_needs?: string | null;
 
     notes?: string | null;
@@ -80,7 +81,7 @@ export interface Child {
     emergency_contact_relationship?: string;
 
     // Status
-    status: 'active' | 'archived' | 'pending' | 'deleted'; // Enforced literal types
+    status: 'Active' | 'Inactive' | 'Graduated' | 'Transferred' | 'Completed';
     deleted_at?: string | null;
 
     // Relationships
@@ -117,7 +118,6 @@ export interface Daycare {
     principal_name: string;
     license_number?: string | null;
     capacity: number;
-    current_enrollment: number;
     status: string;
     established_date?: string | null;
     description?: string | null;
@@ -135,10 +135,19 @@ export interface Assessment {
     teacher_id: number;
     daycare_id: number;
     assessment_date: string;
+
+    assessment_type: '1st Assessment' | '2nd Assessment' | '3rd Assessment';
+    scores?: AssessmentScore[];
+    areas_for_improvement?: string | null;
     status: string;
     overall_score?: number | null;
+
+    // 🚀 THE FIX: Add these 3 lines here
+    sum_of_scaled?: number | null;
+    evaluation_number?: string;
+    form_version?: string;
+
     overall_notes?: string | null;
-    recommendations?: string | null;
     next_assessment_date?: string | null;
     created_at: string;
 

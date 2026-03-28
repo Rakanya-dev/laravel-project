@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Daycare;
-use App\Models\Student; // 👈 1. Import Student Model
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use App\Exports\UsersExport;
@@ -17,45 +15,56 @@ use Illuminate\Support\Facades\Redirect;
 
 class UsersController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = $request->query('search');
+        $status = $request->query('status', 'all');
+        $daycare = $request->query('daycare', 'all');
+
+        $applyFilters = function ($query) use ($search, $status, $daycare) {
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+
+            if ($daycare !== 'all') {
+                $query->where(function ($q) use ($daycare) {
+                    // 🚀 RESTORED: Back to native 'daycare' relationship
+                    $q->whereHas('daycare', fn($d) => $d->where('name', $daycare))
+                        ->orWhereHas('students.daycare', fn($d) => $d->where('name', $daycare));
+                });
+            }
+        };
+
+        // 1. Fetch Teachers
         $teachers = User::with('daycare:id,name')
             ->where('role', 'teacher')
-            ->paginate(10);
+            ->where($applyFilters)
+            ->latest()
+            ->paginate(10, ['*'], 'teachers_page')
+            ->withQueryString();
 
-        // 2. Select specific fields to see the "Claim"
-        $parents = User::with(['daycare:id,name', 'students'])
+        // 2. Fetch Parents
+        $parents = User::with(['daycare', 'students.daycare'])
             ->where('role', 'parent')
-            ->select('id', 'first_name', 'last_name', 'email', 'status', 'role', 'phone', 'daycare_id')
-            ->paginate(10);
+            ->where($applyFilters)
+            ->latest()
+            ->paginate(10, ['*'], 'parents_page')
+            ->withQueryString();
 
-        // 3. Get Pending Requests
-        $pendingRequests = DB::table('student_parent')
-            ->join('users', 'student_parent.parent_id', '=', 'users.id')
-            ->join('students', 'student_parent.student_id', '=', 'students.id')
-            ->where('student_parent.status', 'Pending')
-            ->select(
-                'student_parent.id as link_id',
-                'users.id as parent_id',
-                'users.first_name as parent_first',
-                'users.last_name as parent_last',
-                'users.email as parent_email',
-                'students.first_name as child_first',
-                'students.last_name as child_last',
-                'student_parent.created_at'
-            )
-            ->get();
         $daycares = Daycare::all(['id', 'name']);
-
-        // 3. Get all students for the dropdown list in the Approval Modal
-        $students = Student::select('id', 'first_name', 'last_name')->get();
 
         return Inertia::render('admin/users-management', [
             'teachers' => $teachers,
             'parents' => $parents,
             'daycares' => $daycares,
-            'students' => $students,
-            'pendingRequests' => $pendingRequests,
         ]);
     }
 
@@ -69,25 +78,33 @@ class UsersController extends Controller
             'phone' => 'required',
             'password' => 'required|confirmed|min:8',
             'daycare_id' => 'required|exists:daycares,id',
+            'role' => 'required|in:teacher,parent',
         ]);
 
         $newUser = User::create([
-            ...$validated,
-            'role' => 'teacher',
-            'daycare_id' => $validated['daycare_id'],
-            'status' => 'active',
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
             'phone' => $validated['phone'],
+            'daycare_id' => $validated['daycare_id'],
+            'role' => $validated['role'],
+            'status' => 'Active',
             'password' => bcrypt($validated['password']),
         ]);
 
-        $daycare = Daycare::find($validated['daycare_id']);
-
-        if ($daycare) {
-            $daycare->principal_name = $newUser->full_name;
-            $daycare->save();
+        if ($validated['role'] === 'teacher') {
+            $daycare = Daycare::find($validated['daycare_id']);
+            if ($daycare) {
+                $daycare->principal_name = $newUser->full_name;
+                $daycare->save();
+            }
         }
 
-        return redirect()->route('admin.users.management')->with('success', 'Teacher account created.');
+        return redirect()->route('admin.users.management')->with(
+            'success',
+            ucfirst($validated['role']) . ' account created successfully.'
+        );
     }
 
     public function update(Request $request, $id)
@@ -105,6 +122,7 @@ class UsersController extends Controller
             ],
             'phone' => 'required',
             'daycare_id' => 'required|exists:daycares,id',
+            'status' => 'required|in:Active,Pending,Inactive', // 🚀 Make sure status can be saved!
         ]);
 
         $user->update($validated);
@@ -116,9 +134,10 @@ class UsersController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($user->daycare && $user->daycare->principal_name === $user->full_name) {
-            $user->daycare->principal_name = null;
-            $user->daycare->save();
+        // 🚀 Bonus Fix: Use daycareCenter relationship here too just in case!
+        if ($user->daycareCenter && $user->daycareCenter->principal_name === $user->full_name) {
+            $user->daycareCenter->principal_name = null;
+            $user->daycareCenter->save();
         }
 
         $user->delete();
@@ -149,41 +168,5 @@ class UsersController extends Controller
         return response()->json([
             'teachers' => $teacherNames
         ]);
-    }
-
-    public function approveRequest($linkId)
-    {
-        // 1. Find the Link Record
-        $link = DB::table('student_parent')->where('id', $linkId)->first();
-
-        if ($link) {
-            // A. Approve the Link (The Connection)
-            // This makes "parentLinked: true" on Student Management
-            DB::table('student_parent')
-                ->where('id', $linkId)
-                ->update(['status' => 'Active']);
-
-            // B. Approve the Parent Account (The User)
-            // This allows them to log in
-            User::where('id', $link->parent_id)->update(['status' => 'Active']);
-
-            // C. Approve the Student (The Profile)
-            // If this was a brand new student (Path C in Register), they are hidden as 'Pending'.
-            // This reveals them on the Student Management list.
-            Student::where('id', $link->student_id)
-                ->where('status', 'Pending')
-                ->update(['status' => 'Active']);
-        }
-
-        return back()->with('success', 'Parent account and Student link approved successfully.');
-    }
-
-    public function rejectRequest($id)
-    {
-        DB::table('student_parent')
-            ->where('id', $id)
-            ->delete();
-
-        return back()->with('success', 'Request rejected.');
     }
 }

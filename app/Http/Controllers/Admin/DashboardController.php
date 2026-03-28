@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\Assessment;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Models\EnrollmentRequest;
 
 class DashboardController extends Controller
 {
@@ -16,55 +17,51 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // Define base queries for filtering out admin and head office entries
-        $nonAdminUserQuery = User::where('role', '!=', 'admin');
+        // --- Obj A: Digital Tracking (Learners) ---
+        $totalLearners = Student::count();
+        $activeLearners = Student::where('status', 'Active')->count();
 
-        $nonHeadOfficeDaycareQuery = Daycare::where('name', '!=', 'KIDTRAK Head Office');
+        // 🚀 THIS IS NOW OUR MAIN APPROVAL METRIC
+        $pendingEnrollments = EnrollmentRequest::where('status', 'Pending')->count();
 
-
-        // --- User Stats (Excluding Admin) ---
-        $totalUsers = $nonAdminUserQuery->count();
-        $activeUsers = $nonAdminUserQuery->where('status', 'active')->count();
-
-
-        // --- Daycare Stats (Excluding Head Office) ---
-        $totalDaycares = $nonHeadOfficeDaycareQuery->count();
-
-        $activeDaycares = (clone $nonHeadOfficeDaycareQuery)->where('status', 'active')->count();
-
-
-        // --- Student and Assessment Stats ---
-        $totalStudents = Student::count();
-        $activeStudents = Student::where('status', 'active')->count();
+        // --- Obj B: Analytics (Assessments) ---
         $totalAssessments = Assessment::count();
-        $completedAssessments = Assessment::where('status', 'completed')->count();
+        $reportsGenerated = Assessment::where('status', 'Completed')->count();
+        $flaggedResults = Assessment::where('status', 'Flagged')->count();
 
+        // --- Obj D: System Management (Centers & Staff) ---
+        $nonHeadOfficeDaycareQuery = Daycare::where('name', '!=', 'KIDTRAK Head Office');
+        $totalCenters = $nonHeadOfficeDaycareQuery->count();
 
-        // --- Recent Users (Excluding Admin) ---
-        $recentRawUsers = User::with('daycare:id,name')
-                            ->where('role', '!=', 'admin')
-                            ->orderBy('created_at', 'desc')
-                            ->limit(5)
-                            ->get();
+        // Count active teachers/CDWs (excluding admins and parents)
+        $activeStaff = User::where('role', 'teacher')
+            ->where('status', 'Active')
+            ->count();
 
-        // --- System Alerts (Mocked) ---
-        $systemAlerts = [
-            ['id' => 1, 'type' => 'warning', 'message' => 'Central Branch approaching capacity (98%)', 'time' => '2 hours ago'],
-            ['id' => 2, 'type' => 'info', 'message' => 'New assessment template available', 'time' => '5 hours ago'],
-        ];
+        // --- Recent Users (Activity Feed) ---
+        $recentRawUsers = User::with(['daycare:id,name', 'students.daycare'])
+            ->where('role', '!=', 'admin')
+            // 🚀 FIX: Sort by actual login time if you have it!
+            ->orderBy('last_login_at', 'desc')
+            ->limit(6)
+            ->get();
 
+        // 🚀 FIRE IT TO THE FRONTEND
         return Inertia::render('admin/dashboard', [
             'adminName' => $user->first_name,
-            'totalUsers' => $totalUsers,
-            'activeUsers' => $activeUsers,
-            'activeDaycares' => $activeDaycares,
-            'totalDaycares' => $totalDaycares,
-            'totalStudents' => $totalStudents,
-            'activeStudents' => $activeStudents,
+            'totalLearners' => $totalLearners,
+            'activeLearners' => $activeLearners,
+
+            // 🚀 Replaces Obj C entirely
+            'pendingEnrollments' => $pendingEnrollments,
+
             'totalAssessments' => $totalAssessments,
-            'completedAssessments' => $completedAssessments,
+            'reportsGenerated' => $reportsGenerated,
+            'flaggedResults' => $flaggedResults,
+
+            'totalCenters' => $totalCenters,
+            'activeStaff' => $activeStaff,
             'recentUsers' => $recentRawUsers,
-            'systemAlerts' => $systemAlerts,
         ]);
     }
 }

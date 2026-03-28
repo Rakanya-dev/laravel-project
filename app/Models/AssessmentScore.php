@@ -14,6 +14,7 @@ class AssessmentScore extends Model
         'assessment_id',
         'domain_id',
         'score',
+        'scaled_score',  // <--- ADD THIS IF IT IS MISSING!
         'max_score',
         'rating',
         'notes',
@@ -24,8 +25,11 @@ class AssessmentScore extends Model
      * Get the domain that owns this score.
      * This allows you to access $score->domain->name
      */
-    public function domain(): BelongsTo
+    // app/Models/AssessmentScore.php
+
+    public function domain()
     {
+        // Ensure this says 'AssessmentDomain::class', NOT 'Domain::class'
         return $this->belongsTo(AssessmentDomain::class, 'domain_id');
     }
 }

@@ -1,19 +1,22 @@
 <?php
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\Admin\DaycareManagementController as AdminDaycareController;
+use App\Http\Controllers\Admin\SectionController as AdminSectionController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\AssessmentOverviewController as AdminAssessmentOverviewController;
-use App\Http\Controllers\Admin\ReportsController as AdminReportsController;
+use App\Http\Controllers\Admin\ReportController as AdminReportController;
 
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\StudentController as TeacherStudentController;
 use App\Http\Controllers\Teacher\AssessmentController as TeacherAssessmentController;
-use App\Http\Controllers\Teacher\ReportsController as TeacherReportsController;
+use App\Http\Controllers\Teacher\ReportController as TeacherReportController;
 
 use App\Http\Controllers\Parent\DashboardController as ParentDashboardController;
 use App\Http\Controllers\Parent\ChildController as ParentChildController;
+use App\Http\Controllers\Parent\EnrollmentController as ParentEnrollmentController;
+use App\Http\Controllers\Parent\AssessmentController as ParentAssessmentController;
+use App\Http\Controllers\Parent\ReportController as ParentReportController;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redirect;
@@ -22,54 +25,15 @@ use Inertia\Inertia;
 
 use App\Http\Middleware\CheckParentStatus;
 
-Route::get('/', fn() => Redirect::route('login'))->name('home');
+use App\Http\Controllers\General\AssessmentExportController;
+
+Route::get('/', fn() => Redirect::route('login'))->name(name: 'home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 1. THE WAITING ROOM
-    // This gives your Middleware a safe place to redirect pending users.
-    Route::get('/approval-pending', function () {
-        return Inertia::render('auth/pending-approval');
-    })->name('approval.notice');
-
-    Route::get('/auth/check-status', function () {
-        $user = Auth::user()->fresh();
-
-        // Check 1: Is the User Account active?
-        if ($user->status !== 'Active') {
-            return response()->json([
-                'status' => 'Pending',
-                'reason' => 'User Account is still Pending'
-            ]);
-        }
-
-        // Check 2: Is the Child Link active?
-        $student = $user->students()->withPivot('status')->first();
-
-        if ($student && $student->pivot->status === 'Pending') {
-            return response()->json([
-                'status' => 'Pending',
-                'reason' => 'Child Link is still Pending (User is Active)'
-            ]);
-        }
-
-        return response()->json(['status' => 'Active']);
-    });
-    // 1. View the Inbox
-    Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
-
-    // 2. Send a Message
-    Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
-    Route::patch('/messages/{message}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
-    Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
-    // 2. REDIRECT LOGIC
+    // 1. DASHBOARD REDIRECT (Clean and simple!)
     Route::get('/redirect-by-role', function () {
         $user = Auth::user();
-
-        // If parent is pending, send them to the dedicated route above
-        if ($user->role === 'parent' && $user->status !== 'active') {
-            return redirect()->route('approval.notice');
-        }
 
         return match ($user->role) {
             'admin' => redirect()->route('admin.dashboard'),
@@ -80,6 +44,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('role.redirect');
 
     Route::get('/dashboard', fn() => redirect()->route('role.redirect'))->name('dashboard');
+
+    // 1. View the Inbox
+    Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
+
+    // 2. Send a Message
+    Route::post('/messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::patch('/messages/{message}/read', [MessageController::class, 'markAsRead'])->name('messages.read');
+    Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('messages.destroy');
+
 
     // ADMIN ROUTES
     Route::prefix('admin')->name('admin.')->group(function () {
@@ -104,8 +77,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/daycare-management/{daycare}', [AdminDaycareController::class, 'update'])->name('daycare.update');
         Route::delete('/daycare-management/{daycare}', [AdminDaycareController::class, 'destroy'])->name('daycare.destroy');
 
+        Route::post('/admin/sections', [AdminSectionController::class, 'store'])->name('sections.store');
+        Route::delete('/admin/sections/{section}', [AdminSectionController::class, 'destroy'])->name('sections.destroy');
+
         // Students
         Route::get('/student-management', [AdminStudentController::class, 'index'])->name('student.index');
+
+        Route::get('/secure-docs/{type}/{filename}', [AdminStudentController::class, 'viewSecureDoc'])->name('secure-doc');
+        // Secure Document Viewer for Admins
+        Route::get('/secure-docs/{folder}/{filename}', [AdminStudentController::class, 'showSecureDoc'])
+            ->name('secure-docs.show');
+        Route::post('/enrollments/{id}/approve', [AdminStudentController::class, 'approveEnrollment'])->name('enrollments.approve');
+        Route::post('/enrollments/{id}/reject', [AdminStudentController::class, 'rejectEnrollment'])->name('enrollments.reject');
+        Route::post('/guardian-requests/{id}/approve', [AdminStudentController::class, 'approveLinkRequest'])->name('requests.approve');
         Route::post('/students', [AdminStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{id}', [AdminStudentController::class, 'update'])->name('students.update');
         Route::delete('/students/{id}', [AdminStudentController::class, 'destroy'])->name('students.destroy');
@@ -117,19 +101,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/students/{id}/archive', [AdminStudentController::class, 'archive'])->name('students.archive');
         Route::post('/students/{id}/restore', [AdminStudentController::class, 'restore'])->name('students.restore');
         Route::delete('/students/{id}/permanent-delete', [AdminStudentController::class, 'permanentDelete'])->name('students.permanent-delete');
+        // Add this right next to your other Admin student routes:
         Route::post('/students/bulk-archive', [AdminStudentController::class, 'bulkArchive'])->name('students.bulk-archive');
         Route::post('/students/bulk-restore', [AdminStudentController::class, 'bulkRestore'])->name('students.bulk-restore');
         Route::post('/students/bulk-permanent-delete', [AdminStudentController::class, 'bulkPermanentDelete'])->name('students.bulk-permanent-delete');
+        Route::get('/students/{id}/report', [AdminStudentController::class, 'printReport'])->name('students.report');
+        // Reports
+        // The actual page
+        Route::get('/reports', [AdminReportController::class, 'index'])
+            ->name('reports.index');
 
-        // Assessments & Reports
-        Route::get('/assessments-overview', [AdminAssessmentOverviewController::class, 'index'])->name('assessments.overview');
-        Route::get('/reports', [AdminReportsController::class, 'index'])->name('reports');
-        Route::post('/reports/templates', [AdminReportsController::class, 'storeTemplate'])->name('reports.templates.store');
-        Route::patch('/reports/templates/{id}', [AdminReportsController::class, 'updateTemplate'])->name('reports.templates.update');
-        Route::delete('/reports/templates/{id}', [AdminReportsController::class, 'destroyTemplate'])->name('reports.templates.destroy');
-        Route::post('/reports/store', [AdminReportsController::class, 'storeReport'])->name('reports.store');
-        Route::get('/reports/export', [AdminReportsController::class, 'export'])->name('reports.export');
-        Route::get('/reports/fetch-data', [AdminReportsController::class, 'getReportData'])->name('reports.data');
+        // The CSV export
+        Route::get('/reports/master-roster', [AdminReportController::class, 'exportMasterRoster'])
+            ->name('reports.master-roster');
+        // The Compliance Audit CSV
+        Route::get('/reports/compliance-audit', [AdminReportController::class, 'exportComplianceAudit'])
+            ->name('reports.compliance-audit');
+        // The Consolidated Analytics PDF
+        Route::get('/reports/consolidated-report', [AdminReportController::class, 'exportConsolidatedReport'])
+            ->name('reports.consolidated-report');
     });
 
     // TEACHER ROUTES
@@ -142,23 +132,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('/students/{id}', [TeacherStudentController::class, 'update'])->name('students.update');
         Route::post('/students/{id}/archive', [TeacherStudentController::class, 'archive'])->name('students.archive');
         Route::post('/students/{id}/restore', [TeacherStudentController::class, 'restore'])->name('students.restore');
-        Route::delete('/students/{id}/permanent-delete', [TeacherStudentController::class, 'permanentDelete'])->name('students.permanent-delete');
         Route::post('/students/bulk-archive', [TeacherStudentController::class, 'bulkArchive'])->name('students.bulk-archive');
         Route::post('/students/bulk-restore', [TeacherStudentController::class, 'bulkRestore'])->name('students.bulk-restore');
-        Route::post('/students/bulk-permanent-delete', [TeacherStudentController::class, 'bulkPermanentDelete'])->name('students.bulk-permanent-delete');
         Route::post('/students/{student}/regenerate-code', [TeacherStudentController::class, 'regenerateCode'])->name('students.regenerate-code');
         Route::get('/students/print', [TeacherStudentController::class, 'printCodes'])->name('students.print-codes');
-        // Assessments
-        Route::get('/assessments', [TeacherAssessmentController::class, 'index'])->name('assessment-management');
-        Route::post('/assessments', [TeacherAssessmentController::class, 'store'])->name('assessments.store');
-        Route::get('/assessments/{id}/edit', [TeacherAssessmentController::class, 'edit'])->name('assessments.edit');
-        Route::patch('/assessments/{id}', [TeacherAssessmentController::class, 'update'])->name('assessments.update');
-        Route::delete('/assessments/{id}', [TeacherAssessmentController::class, 'destroy'])->name('assessments.destroy');
+        Route::get('/students/{id}/consolidated-report', [TeacherStudentController::class, 'printConsolidatedReport'])->name('students.consolidated-report');
+        // Printable Report
+        Route::get('/students/{id}/report', [TeacherStudentController::class, 'printReport'])
+            ->name('students.report');
 
         // Reports
-        Route::get('/reports', [TeacherReportsController::class, 'index'])->name('reports');
-        Route::post('/reports/store', [TeacherReportsController::class, 'storeReport'])->name('reports.store');
-        Route::get('/reports/fetch-data', [AdminReportsController::class, 'getReportData'])->name('reports.data');
+        Route::get('/reports/student/{id}', [TeacherReportController::class, 'showStudentProfile'])
+            ->name('reports.student');
+        Route::get('/reports/class-consolidated', [TeacherReportController::class, 'showClassConsolidated'])
+            ->name('reports.consolidated');
+        Route::get('/reports/domain-analysis', [TeacherReportController::class, 'showDomainAnalysis'])
+            ->name('reports.analysis');
+
+        // Assessments
+        Route::get('/assessments-management', [TeacherAssessmentController::class, 'index'])->name('assessments-management');
+        Route::get('/assessments/{assessment}', [TeacherAssessmentController::class, 'show'])->name('assessments.show');
+        Route::post('/assessments-management', [TeacherAssessmentController::class, 'store'])->name('assessments.store');
+        Route::post('/assessments-management/bulk-store', [TeacherAssessmentController::class, 'bulkStore'])->name('assessments.bulk-store');
+        Route::get('/assessments-management/{id}/edit', [TeacherAssessmentController::class, 'edit'])->name('assessments.edit');
+        Route::patch('/assessments-management/{id}', [TeacherAssessmentController::class, 'update'])->name('assessments.update');
+        Route::delete('/assessments-management/{id}', [TeacherAssessmentController::class, 'destroy'])->name('assessments.destroy');
+        Route::get('assessments-management/create', [TeacherAssessmentController::class, 'create'])->name('assessments.create');
+
+        // The actual form pages
+        Route::get('assessments/ited/{assessment}', [TeacherAssessmentController::class, 'itedForm'])->name('assessments.ited.form');
+        Route::get('assessments/eccd/{assessment}', [TeacherAssessmentController::class, 'eccdForm'])->name('assessments.eccd.form');
+
+        // 🚀 Import Routes
+        Route::get('/students/import-template', [TeacherStudentController::class, 'importTemplate']);
+        Route::post('/students/import', [TeacherStudentController::class, 'import']);
     });
 
     // PARENT ROUTES
@@ -166,15 +173,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('parent.')
         ->middleware([CheckParentStatus::class]) // Protected by Middleware
         ->group(function () {
+
+            Route::post('/enroll', [ParentEnrollmentController::class, 'store'])->name('enroll.store');
+            Route::post('/verify-pin', [ParentEnrollmentController::class, 'verifyPin'])->name('verify-pin');
+            // 1. To show the document upload page
+            Route::get('/link-documents', [ParentEnrollmentController::class, 'showLinkDocuments'])->name('link-documents');
+
+            // 2. To handle the actual file upload (we'll build the logic for this next!)
+            Route::post('/link-documents', [ParentEnrollmentController::class, 'storeLinkDocuments'])->name('link.store');
+
             Route::get('/dashboard', [ParentDashboardController::class, 'index'])->name('dashboard');
-            Route::get('/child-profile', [ParentChildController::class, 'index'])->name('child-profile');
-            Route::post('/notes', [ParentChildController::class, 'storeNote'])->name('notes.store');
-            Route::patch('/notes/{id}', [ParentChildController::class, 'updateNote'])->name('notes.update');
-            Route::delete('/notes/{id}', [ParentChildController::class, 'deleteNote'])->name('notes.delete');
 
-            Route::get('/assessment', fn() => Inertia::render('parent/assessment'))->name('assessment');
+            // 🚀 The PDF Routes for Assessments
+            Route::get('/assessments/{id}/download', [ParentAssessmentController::class, 'download'])->name('assessments.download');
+            Route::get('/assessments/{id}/print', [ParentAssessmentController::class, 'print'])->name('assessments.print');
+
+            // 🚀 The PDF Routes for Reports
+            Route::get('/reports/{id}/download', [ParentReportController::class, 'download'])->name('reports.download');
+            Route::get('/reports/{id}/print', [ParentReportController::class, 'print'])->name('reports.print');
+
         });
-
 });
 
 require __DIR__ . '/settings.php';

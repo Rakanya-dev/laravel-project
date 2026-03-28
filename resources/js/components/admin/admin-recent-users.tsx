@@ -2,19 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 
-// --- Reused Type ---
 interface User {
     id: number;
     firstName: string;
-    middleName: string;
     lastName: string;
     email: string;
-    phone: string;
     daycare: string;
-    status: string;
     role: string;
+    lastActive: string;
 }
-// --------------------
 
 interface AdminRecentUsersProps {
     users: User[];
@@ -27,30 +23,14 @@ export default function AdminRecentUsers({
     maxUsers = 5,
     onUserClick = () => {}
 }: AdminRecentUsersProps) {
-    const getFullName = (user: User) => {
-        return `${user.firstName}${user.middleName ? ' ' + user.middleName : ''} ${user.lastName}`.trim();
-    };
-
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'Pending':
-                return <Badge className="bg-[#fefbe9] text-[#a56105] border-[#ffee8e] hover:bg-[#fefbe9]">Pending</Badge>;
-            case 'Active':
-                return <Badge className="bg-blue-50 text-[#1d4ed8] border-[#bfdbfe] hover:bg-blue-50">Active</Badge>;
-            case 'Rejected':
-                return <Badge className="bg-red-50 text-[#dc2626] border-[#fecaca] hover:bg-red-50">Rejected</Badge>;
-            default:
-                return <Badge className="bg-green-50 text-[#27815f] border-[#baf7d1] hover:bg-green-50">Approved</Badge>;
-        }
-    };
 
     const getRoleBadge = (role: string) => {
         const lowerRole = role.toLowerCase();
         if (lowerRole === 'teacher') {
-            return <Badge variant="outline" className="bg-purple-50 text-purple-700">Teacher</Badge>;
+            return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">CDW / Teacher</Badge>;
         }
         if (lowerRole === 'parent') {
-            return <Badge variant="outline" className="bg-green-50 text-green-700">Parent</Badge>;
+            return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Parent</Badge>;
         }
         return <Badge variant="outline">{role}</Badge>;
     };
@@ -58,44 +38,47 @@ export default function AdminRecentUsers({
     const displayUsers = users.slice(0, maxUsers);
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Recent Users</CardTitle>
-                <CardDescription>Newly registered accounts</CardDescription>
+        <Card className="shadow-sm h-full">
+            <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Recent User Activity</CardTitle>
+                <CardDescription>Latest logins across all centers</CardDescription>
             </CardHeader>
             <CardContent>
                 {displayUsers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                        <p>No recent users</p>
+                    <div className="text-center py-8 text-slate-500">
+                        <p>No recent user activity</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {displayUsers.map((user) => {
-                            const fullName = getFullName(user);
+                            const fullName = `${user.firstName} ${user.lastName}`.trim();
                             const initials = `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
 
                             return (
                                 <div
                                     key={user.id}
-                                    className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                                    className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2.5 rounded-xl border border-transparent hover:border-slate-100 transition-colors"
                                     onClick={() => onUserClick(user)}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Avatar className="size-10">
-                                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                                        <Avatar className="size-10 rounded-xl">
+                                            <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold rounded-xl">
                                                 {initials}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div>
-                                            <p className="text-black">{fullName}</p>
-                                            <div className="flex items-center gap-2 mt-1">
+                                            <p className="font-semibold text-slate-900">{fullName}</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
                                                 {getRoleBadge(user.role)}
-                                                <span className="text-sm text-neutral-500">{user.daycare}</span>
+                                                <span className="text-xs text-slate-500 font-medium truncate max-w-[150px] sm:max-w-none">
+                                                    {user.daycare}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        {getStatusBadge(user.status)}
+                                    <div className="text-right hidden sm:block">
+                                        <p className="text-xs text-slate-400">Last Active</p>
+                                        <p className="text-sm font-medium text-slate-600">{user.lastActive}</p>
                                     </div>
                                 </div>
                             );

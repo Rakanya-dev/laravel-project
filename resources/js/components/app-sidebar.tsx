@@ -4,7 +4,8 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Building2, ClipboardList, FileBarChart2, GraduationCap, LayoutGrid, MessageSquareText, User, Users } from 'lucide-react';
+// 👇 Added 'Settings2' for the configuration icon
+import { Building2, ClipboardList, FileBarChart2, GraduationCap, LayoutGrid, MessageSquareText, Settings2, User, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -33,19 +34,13 @@ export function AppSidebar() {
             icon: GraduationCap,
         },
         {
-            title: 'Assessment Overview',
-            href: '/admin/assessments-overview',
-            icon: ClipboardList,
-        },
-        {
-            title: 'Reports & Analytics',
+            title: 'Reports',
             href: '/admin/reports',
             icon: FileBarChart2,
         },
         {
             title: 'Messages',
             href: route('messages.index'),
-            // 👇 Updated to wildcard '*' so it stays active if you view a specific message later
             isActive: route().current('messages.*'),
             icon: MessageSquareText,
         },
@@ -64,18 +59,12 @@ export function AppSidebar() {
         },
         {
             title: 'My Assessments',
-            href: '/teacher/assessments',
+            href: '/teacher/assessments-management',
             icon: ClipboardList,
-        },
-        {
-            title: 'Reports',
-            href: '/teacher/reports',
-            icon: FileBarChart2,
         },
         {
             title: 'Messages',
             href: route('messages.index'),
-            // 👇 Updated to wildcard '*' so it stays active if you view a specific message later
             isActive: route().current('messages.*'),
             icon: MessageSquareText,
         },
@@ -95,7 +84,6 @@ export function AppSidebar() {
         {
             title: 'Messages',
             href: route('messages.index'),
-            // 👇 Updated to wildcard '*' so it stays active if you view a specific message later
             isActive: route().current('messages.*'),
             icon: MessageSquareText,
         },

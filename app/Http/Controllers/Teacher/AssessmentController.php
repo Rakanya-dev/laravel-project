@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use App\Services\EccdScoringService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Carbon\Carbon;
 
 class AssessmentController extends Controller
 {
@@ -52,190 +54,282 @@ class AssessmentController extends Controller
             $index = $studentHistory->search(fn($item) => $item->id === $assessment->id);
             $assessment->evaluation_number = 'Evaluation #' . ($index + 1);
 
+            $dob = Carbon::parse($assessment->student->date_of_birth);
+            $assessDate = Carbon::parse($assessment->assessment_date);
 
+            // 🚀 Official Boundary: Record 1 (0-36m), Record 2 (37m+)
+            $ageInMonths = $dob->diffInMonths($assessDate);
+            $isEccd = $ageInMonths >= 37;
+
+            $assessment->form_version = $isEccd ? 'ECCD (3-5y)' : 'ITED (0-3y)';
+
+            if ($isEccd) {
+                $assessment->sum_of_scaled = $assessment->scores
+                    ->where('is_included', true)
+                    ->sum('scaled_score');
+            } else {
+                $assessment->sum_of_scaled = null;
+            }
 
             return $assessment;
         });
 
-        $sortedAssessments = $assessmentsWithNumbers->sortByDesc('assessment_date')->values();
+        $domains = AssessmentDomain::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name']);
 
-        return Inertia::render('teacher/assessments', [
-            'assessments' => $sortedAssessments,
-            'students' => $students,
+        return Inertia::render('teacher/assessments-management', [
+            'assessments' => $assessmentsWithNumbers,
+            'students' => Student::with('section')
+                ->where('daycare_id', $daycareId) // Use the $daycareId you already defined at the top
+                ->get(),
+            'domains' => $domains,
         ]);
     }
 
-    public function store(Request $request)
+    public function show($id)
     {
-        $teacher = Auth::user();
-        $daycareId = $this->getTeacherDaycareId();
+        $assessment = Assessment::with('student')->findOrFail($id);
+        return $this->redirectToForm($assessment->student, $assessment->id);
+    }
 
-        $validated = $request->validate([
-            'student_id' => ['required', 'integer', Rule::exists('students', 'id')->where('daycare_id', $daycareId)],
-            'assessment_type' => 'required|string',
-        ]);
+    // 🚀 NEW: Smart Create with Baseline Calculation
+    public function create(Request $request, EccdScoringService $scoringService)
+    {
+        $studentId = $request->query('student_id');
+        if (!$studentId) {
+            return redirect()->route('teacher.my-students')->with('error', 'No student selected.');
+        }
 
-        $exists = Assessment::where('student_id', $validated['student_id'])
+        $student = Student::findOrFail($studentId);
+
+        if ($student->status === 'Graduated' || $student->status === 'Completed' || $student->is_graduating) {
+            return redirect('/teacher/my-students')->with('error', 'This student has completed the program and cannot be assessed.');
+        }
+
+        $existingDraft = Assessment::where('student_id', $studentId)
             ->whereIn('status', ['Draft', 'In Progress'])
-            ->exists();
+            ->first();
 
-        if ($exists) {
-            return back()->withErrors(['student_id' => 'This student already has an assessment in progress.']);
+        if ($existingDraft) {
+            return $this->redirectToForm($student, $existingDraft->id);
         }
 
-        $student = Student::find($validated['student_id']);
+        $completedCount = Assessment::where('student_id', $studentId)
+            ->where('status', 'Completed')
+            ->count();
 
-        $previousScores = [];
-        $previousNotes = "";
-        $previousRecs = "";
+        $typeNames = ['1st Assessment', '2nd Assessment', '3rd Assessment'];
+        $nextType = $typeNames[$completedCount] ?? 'Follow-up';
 
-        if ($validated['assessment_type'] === 'followup') {
-            $lastAssessment = Assessment::where('student_id', $student->id)
-                ->where('status', 'Completed')
-                ->with('scores')
-                ->latest('assessment_date')
-                ->first();
-
-            if ($lastAssessment) {
-                $previousScores = $lastAssessment->scores->pluck('score', 'domain_id')->toArray();
-
-                $previousNotes = "Follow-up to " . ($lastAssessment->assessment_date ? $lastAssessment->assessment_date->format('M Y') : 'previous') . " assessment.\n\n" . $lastAssessment->overall_notes;
-                $previousRecs = $lastAssessment->recommendations;
-            }
-        }
-        // -----------------------------------------------------
+        // 🚀 Exact Age Snapshot & Strict Boundary
+        $dob = Carbon::parse($student->date_of_birth);
+        $evalDate = now();
+        $age = $dob->diff($evalDate);
+        $totalMonths = ($age->y * 12) + $age->m;
+        $isEccd = $totalMonths >= 37;
 
         $assessment = Assessment::create([
             'student_id' => $student->id,
-            'teacher_id' => $teacher->id,
-            'daycare_id' => $daycareId,
-            'assessment_date' => now(),
-            'assessment_type' => $validated['assessment_type'],
+            'teacher_id' => Auth::id(),
+            'daycare_id' => $this->getTeacherDaycareId(),
+            'assessment_type' => $nextType,
             'status' => 'Draft',
-            'school_year' => now()->year . '-' . (now()->year + 1),
-            'semester' => (now()->month > 6) ? '1st' : '2nd',
+            'assessment_date' => $evalDate,
+            'school_year' => $evalDate->year . '-' . ($evalDate->year + 1),
+            'semester' => ($evalDate->month > 6) ? '1st' : '2nd',
             'overall_score' => 0,
             'overall_rating' => 'Not Started',
-            'assessment_summary' => $previousNotes,
-            'recommendation' => $previousRecs,
+            'age_years' => $age->y,
+            'age_months' => $age->m,
+            'form_type' => $isEccd ? 'record_2' : 'record_1',
         ]);
 
         $domains = AssessmentDomain::where('is_active', true)->orderBy('sort_order')->get();
-        $scores = [];
+        $scoresToInsert = [];
 
         foreach ($domains as $domain) {
-            $scoreValue = $previousScores[$domain->id] ?? 0;
+            // 🚀 The Magic: Calculate what a raw score of 0 means right now
+            $initialScaled = $isEccd
+                ? $scoringService->getScaledScore($domain->name, 0, $age->y, $age->m)
+                : 0;
 
-            $scores[] = [
+            $scoresToInsert[] = [
                 'assessment_id' => $assessment->id,
                 'domain_id' => $domain->id,
-                'score' => $scoreValue,
+                'score' => 0,
+                'scaled_score' => $initialScaled,
+                'max_score' => $domain->max_score,
+                'is_included' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         }
 
-        if (!empty($scores)) {
-            AssessmentScore::insert($scores);
+        if (!empty($scoresToInsert)) {
+            AssessmentScore::insert($scoresToInsert);
         }
 
-        // --- REAL-TIME TRIGGER ---
-        AssessmentCreated::dispatch($teacher->id);
+        AssessmentCreated::dispatch($assessment);
 
-        return Redirect::back()->with('success', 'New assessment created.');
+        return $this->redirectToForm($student, $assessment->id);
     }
 
-    public function update(Request $request, $id)
+    // 🚀 NEW: Smart Bulk Store with Baseline Calculation
+    public function bulkStore(Request $request, EccdScoringService $scoringService)
     {
+        $request->validate([
+            'assessments' => 'required|array',
+            'assessments.*.student_id' => 'required|exists:students,id',
+            'assessments.*.assessment_type' => 'required|string',
+        ]);
+
         $daycareId = $this->getTeacherDaycareId();
-        $assessment = Assessment::where('daycare_id', $daycareId)->findOrFail($id);
+        $domains = AssessmentDomain::where('is_active', true)->get();
+        $count = 0;
 
-        $validated = $request->validate([
-            'overall_notes' => 'nullable|string',
-            'recommendations' => 'nullable|string',
-            'next_assessment_date' => 'nullable|string',
-            'status' => ['required', Rule::in(['Draft', 'In Progress', 'Completed'])],
-            'overall_score' => 'nullable|numeric',
-            'scores' => 'required|array',
-            'scores.*.id' => 'required|integer|exists:assessment_scores,id',
-            'scores.*.score' => 'nullable|numeric|min:0',
-            'scores.*.notes' => 'nullable|string',
-        ]);
+        foreach ($request->assessments as $data) {
+            $existingDraft = Assessment::where('student_id', $data['student_id'])
+                ->where('assessment_type', $data['assessment_type'])
+                ->first();
 
-        foreach ($validated['scores'] as $scoreData) {
-            AssessmentScore::where('id', $scoreData['id'])
-                ->where('assessment_id', $assessment->id)
-                ->update(['score' => $scoreData['score'], 'notes' => $scoreData['notes'] ?? null]);
-        }
+            if (!$existingDraft) {
+                $student = Student::findOrFail($data['student_id']);
+                $dob = Carbon::parse($student->date_of_birth);
+                $evalDate = now();
+                $age = $dob->diff($evalDate);
+                $totalMonths = ($age->y * 12) + $age->m;
+                $isEccd = $totalMonths >= 37;
 
-
-        $nextDate = $validated['next_assessment_date'] ?? null;
-        if ($nextDate === 'TBD') {
-            $nextDate = null;
-        }
-
-        $assessment->update([
-            'overall_notes' => $validated['overall_notes'] ?? $assessment->overall_notes,
-            'recommendations' => $validated['recommendations'] ?? $assessment->recommendations,
-            'status' => $validated['status'],
-            'overall_score' => $validated['overall_score'] ?? 0,
-            'completed_at' => ($validated['status'] === 'Completed' && !$assessment->completed_at) ? now() : $assessment->completed_at,
-            'next_assessment_date' => $nextDate,
-        ]);
-
-        // --- AUTO-FOLLOW-UP LOGIC ---
-        $assessment->refresh();
-
-        if ($assessment->status === 'Completed' && $assessment->overall_score < 85) {
-            // Check if a future assessment already exists to prevent duplicates
-            $futureExists = Assessment::where('student_id', $assessment->student_id)
-                ->where('created_at', '>', $assessment->created_at)
-                ->exists();
-
-            if (!$futureExists) {
-                $targetDate = now()->addMonths(3);
-
-                $followUp = Assessment::create([
-                    'student_id' => $assessment->student_id,
+                $assessment = Assessment::create([
+                    'student_id' => $data['student_id'],
                     'teacher_id' => Auth::id(),
                     'daycare_id' => $daycareId,
-                    'assessment_date' => $targetDate,
-                    'assessment_type' => 'Follow-up',
+                    'assessment_type' => $data['assessment_type'],
                     'status' => 'Draft',
-                    'school_year' => $targetDate->year . '-' . ($targetDate->year + 1),
-                    'semester' => ($targetDate->month > 6) ? '1st' : '2nd',
+                    'assessment_date' => $evalDate,
+                    'school_year' => $evalDate->year . '-' . ($evalDate->year + 1),
+                    'semester' => ($evalDate->month > 6) ? '1st' : '2nd',
                     'overall_score' => 0,
                     'overall_rating' => 'Not Started',
-                    'assessment_summary' => "Automatically generated follow-up due to previous assessment results requiring monitoring.",
-                    'recommendation' => "Review areas of concern from previous assessment.",
+                    'age_years' => $age->y,
+                    'age_months' => $age->m,
+                    'form_type' => $isEccd ? 'record_2' : 'record_1',
                 ]);
 
-                // Create scores for the follow-up (starting at 0 or copying previous)
-                $domains = AssessmentDomain::where('is_active', true)->orderBy('sort_order')->get();
-                $currentScores = $assessment->scores->pluck('score', 'domain_id');
-                $newScores = [];
-
+                $scoresToInsert = [];
                 foreach ($domains as $domain) {
-                    $newScores[] = [
-                        'assessment_id' => $followUp->id,
+                    $initialScaled = $isEccd
+                        ? $scoringService->getScaledScore($domain->name, 0, $age->y, $age->m)
+                        : 0;
+
+                    $scoresToInsert[] = [
+                        'assessment_id' => $assessment->id,
                         'domain_id' => $domain->id,
-                        'score' => $currentScores[$domain->id] ?? 0,
+                        'score' => 0,
+                        'scaled_score' => $initialScaled,
+                        'max_score' => $domain->max_score,
+                        'is_included' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
                 }
-                AssessmentScore::insert($newScores);
 
-                // Dispatch event for the NEW auto-generated assessment
-                AssessmentCreated::dispatch(Auth::id());
+                if (!empty($scoresToInsert)) {
+                    AssessmentScore::insert($scoresToInsert);
+                }
 
-                // Optional: Flash a message about the auto-creation
-                return Redirect::back()->with('success', 'Assessment saved. A follow-up has been automatically scheduled due to low scores.');
+                $count++;
             }
         }
 
-        // --- REAL-TIME TRIGGER ---
-        AssessmentUpdated::dispatch(Auth::id());
+        return redirect()->back()->with('success', "$count Draft(s) created successfully.");
+    }
+
+    public function update(Request $request, $id, EccdScoringService $scoringService)
+    {
+        $daycareId = $this->getTeacherDaycareId();
+
+        $assessment = Assessment::where('daycare_id', $daycareId)
+            ->with('student')
+            ->findOrFail($id);
+
+        $validated = $request->validate([
+            'next_assessment_date' => 'nullable|string',
+            'status' => ['required', Rule::in(['Draft', 'In Progress', 'Completed'])],
+            'scores' => 'required|array',
+            'scores.*.id' => 'required|integer|exists:assessment_scores,id',
+            'scores.*.score' => 'nullable|numeric|min:0',
+        ]);
+
+        $dob = Carbon::parse($assessment->student->date_of_birth);
+        $assessmentDate = Carbon::parse($assessment->assessment_date);
+        $age = $dob->diff($assessmentDate);
+
+        // 🚀 Strict Boundary Check
+        $totalMonths = ($age->y * 12) + $age->m;
+        $isEccd = $totalMonths >= 37;
+
+        $sumScaledScores = 0;
+        $totalRawScore = 0;
+        $totalMaxPossible = 0;
+
+        foreach ($validated['scores'] as $scoreData) {
+            $scoreRow = AssessmentScore::with('domain')
+                ->where('assessment_id', $assessment->id)
+                ->find($scoreData['id']);
+
+            if (!$scoreRow)
+                continue;
+
+            $rawScore = $scoreData['score'] ?? 0;
+            $scaledScore = 0;
+            $interpretation = '';
+
+            if ($isEccd) {
+                $scaledScore = $scoringService->getScaledScore(
+                    $scoreRow->domain->name,
+                    $rawScore,
+                    $age->y,
+                    $age->m
+                );
+                $sumScaledScores += $scaledScore;
+                $interpretation = $scoringService->getEccdDomainInterpretation($scaledScore);
+            } else {
+                $scaledScore = $rawScore;
+                $totalRawScore += $rawScore;
+                $totalMaxPossible += $scoreRow->max_score;
+                $interpretation = $scoringService->getItedDomainInterpretation($rawScore, $scoreRow->max_score);
+            }
+
+            $scoreRow->update([
+                'score' => $rawScore,
+                'scaled_score' => $scaledScore,
+                'rating' => $interpretation,
+            ]);
+        }
+
+        if ($isEccd) {
+            $finalScore = $scoringService->getStandardScore($sumScaledScores);
+            $overallInterpretation = $scoringService->getOverallInterpretation($finalScore, $age->y, $age->m);
+        } else {
+            $finalScore = $totalRawScore;
+            $overallInterpretation = $scoringService->getOverallInterpretation($totalRawScore, $age->y, $age->m, $totalMaxPossible);
+        }
+
+        $manualDate = $validated['next_assessment_date'] ?? null;
+        $autoDate = $scoringService->calculateNextDueDate($finalScore, $assessment->assessment_date, $age->y);
+        $finalNextDate = ($manualDate && $manualDate !== 'TBD') ? $manualDate : $autoDate;
+
+        $assessment->update([
+            'status' => $validated['status'],
+            'overall_score' => $finalScore,
+            'overall_rating' => $overallInterpretation,
+            'completed_at' => ($validated['status'] === 'Completed' && !$assessment->completed_at) ? now() : $assessment->completed_at,
+            'next_assessment_date' => $finalNextDate,
+        ]);
+
+        $assessment->load('scores.domain');
 
         return Redirect::back()->with('success', 'Assessment saved successfully!');
     }
@@ -245,13 +339,42 @@ class AssessmentController extends Controller
         $daycareId = $this->getTeacherDaycareId();
         $assessment = Assessment::where('daycare_id', $daycareId)->findOrFail($id);
 
-        if ($assessment->status !== 'Draft')
+        if ($assessment->status !== 'Draft') {
             return Redirect::back()->with('error', 'Cannot delete an assessment that is in progress or completed.');
+        }
 
         $assessment->delete();
-
-        AssessmentUpdated::dispatch(Auth::id());
-
+        event(new AssessmentUpdated($assessment));
         return Redirect::back()->with('success', 'Assessment draft deleted.');
+    }
+
+    private function redirectToForm($student, $assessmentId)
+    {
+        // 🚀 Strict Boundary applied to redirects as well!
+        $ageInMonths = Carbon::parse($student->date_of_birth)->diffInMonths(now());
+
+        if ($ageInMonths <= 36) {
+            return redirect()->route('teacher.assessments.ited.form', ['assessment' => $assessmentId]);
+        } else {
+            return redirect()->route('teacher.assessments.eccd.form', ['assessment' => $assessmentId]);
+        }
+    }
+
+    public function itedForm($assessmentId)
+    {
+        $assessment = Assessment::with('student', 'scores.domain')->findOrFail($assessmentId);
+
+        return Inertia::render('teacher/assessments/ited-form', [
+            'assessment' => $assessment
+        ]);
+    }
+
+    public function eccdForm($assessmentId)
+    {
+        $assessment = Assessment::with('student', 'scores.domain')->findOrFail($assessmentId);
+
+        return Inertia::render('teacher/assessments/eccd-form', [
+            'assessment' => $assessment
+        ]);
     }
 }

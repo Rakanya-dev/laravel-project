@@ -29,56 +29,63 @@ export default function DaycareStats({
 
     const stats: Stat[] = [
         {
-            title: 'Total Daycares',
+            title: 'Total Centers',
             value: totalDaycares.toString(),
             icon: Building2,
-            bgColor: 'bg-blue-50',
-            iconColor: 'text-blue-600',
-            change: 'Active centers'
+            bgColor: 'bg-indigo-50',
+            iconColor: 'text-indigo-600',
+            change: 'Active daycare facilities'
         },
         {
-            title: 'Total Capacity',
+            title: 'System Capacity',
             value: totalCapacity.toString(),
             icon: Users,
-            bgColor: 'bg-purple-50',
-            iconColor: 'text-purple-600',
-            change: `${availableSpots} available spots`
+            bgColor: 'bg-blue-50',
+            iconColor: 'text-blue-600',
+            change: `${availableSpots} total available spots`
         },
         {
-            title: 'Current Students',
+            title: 'Total Enrolled',
             value: totalStudents.toString(),
             icon: TrendingUp,
-            bgColor: 'bg-green-50',
-            iconColor: 'text-green-600',
-            change: 'Enrolled'
+            bgColor: 'bg-emerald-50',
+            iconColor: 'text-emerald-600',
+            change: 'Active student records'
         },
         {
             title: 'Avg Occupancy',
             value: `${averageOccupancy}%`,
             icon: BarChart3,
-            bgColor: 'bg-orange-50',
-            iconColor: 'text-orange-600',
-            change: 'Across all centers'
+            bgColor: 'bg-purple-50',
+            iconColor: 'text-purple-600',
+            change: 'Across all active centers'
         }
     ];
 
     return (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                    <Card key={index}>
+                    <Card
+                        key={index}
+                        className="rounded-2xl border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-indigo-200 hover:shadow-md"
+                    >
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between">
-                                <div className="space-y-1">
-                                    <p className="text-[11px] text-neutral-500 uppercase tracking-wider">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                                         {stat.title}
                                     </p>
-                                    <p className="text-[32px] text-black -mt-1">{stat.value}</p>
-                                    <p className="text-[11px] text-neutral-500">{stat.change}</p>
+                                    <p className="text-3xl font-black text-slate-900 mt-1">
+                                        {stat.value}
+                                    </p>
+                                    <p className="text-xs font-medium text-slate-500 mt-1">
+                                        {stat.change}
+                                    </p>
                                 </div>
-                                <div className={`${stat.bgColor} p-3 rounded-lg`}>
-                                    <Icon className={`size-5 ${stat.iconColor}`} strokeWidth={2} />
+                                <div className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${stat.bgColor}`}>
+                                    <Icon className={`size-6 ${stat.iconColor}`} strokeWidth={2.5} />
                                 </div>
                             </div>
                         </CardContent>

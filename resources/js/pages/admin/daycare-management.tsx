@@ -20,12 +20,15 @@ import DaycareOverview from '@/components/admin/admin-daycare-overview';
 import DaycareDetailsView from '@/components/admin/daycare-details-view';
 import DaycareEditForm from '@/components/admin/daycare-edit-form';
 
+// 🚀 IMPORT NEW DATE TOOLKIT
+import { formatForInput } from '@/utils/date';
 
 export interface Daycare extends InertiaDaycare {
     teacher: string;
     location: string;
     current: number;
     percentage: number;
+    current_enrollment?: number;
 }
 
 export interface DaycareFormData {
@@ -38,39 +41,32 @@ export interface DaycareFormData {
     email: string;
     principal_name: string;
     capacity: string;
-    current_enrollment: string;
     description: string;
     established_date: string;
 }
 
 const calculatePercentage = (current: number, capacity: number) => Math.round((current / capacity) * 100) || 0;
 
-const formatDateForInput = (dateStr: string | null | undefined): string => {
-    if (!dateStr) return '';
-    try {
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return '';
-        return date.toISOString().split('T')[0];
-    } catch (e) {
-        return '';
-    }
-};
+// 🚀 REFACTORED: Now uses the global helper!
+const transformDaycare = (d: any): Daycare => {
+    const currentEnrollment = d.current_enrollment || 0;
 
-const transformDaycare = (d: InertiaDaycare): Daycare => {
-    const currentEnrollment = d.children?.length || d.students?.length || 0;
     return {
         ...d,
         teacher: d.principal_name || 'Unassigned',
         location: `${d.city}, ${d.province}`,
         current: currentEnrollment,
         percentage: calculatePercentage(currentEnrollment, d.capacity),
-        established_date: formatDateForInput(d.established_date),
+        // 🚀 USES NEW HELPER TO PREVENT TIMEZONE SHIFTS
+        established_date: formatForInput(d.established_date),
     };
 };
+
 const breadcrumbs = [
     { title: 'Dashboard', href: '/admin/dashboard' },
     { title: 'Daycare Management', href: '/admin/daycare-management' },
 ];
+
 export default function DaycareManagement() {
     type DaycarePageProps = { daycares: InertiaDaycare[] };
     const { daycares: rawDaycares } = usePage<DaycarePageProps>().props;
@@ -78,6 +74,7 @@ export default function DaycareManagement() {
     const daycares: Daycare[] = useMemo(() => {
         return rawDaycares.map(transformDaycare);
     }, [rawDaycares]);
+
     const [isAddDaycareOpen, setIsAddDaycareOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedDaycareId, setSelectedDaycareId] = useState<number | null>(null);
@@ -95,7 +92,6 @@ export default function DaycareManagement() {
         email: '',
         principal_name: '',
         capacity: '',
-        current_enrollment: '0',
         description: '',
         established_date: '',
     });
@@ -115,6 +111,15 @@ export default function DaycareManagement() {
         fetchTeachers();
     }, []);
 
+    useEffect(() => {
+        if (viewingDaycare) {
+            const freshDaycareData = daycares.find((d) => d.id === viewingDaycare.id);
+            if (freshDaycareData) {
+                setViewingDaycare(freshDaycareData);
+            }
+        }
+    }, [daycares]);
+
     const handleBackToList = () => {
         setViewingDaycare(null);
         setEditingDaycare(null);
@@ -131,7 +136,6 @@ export default function DaycareManagement() {
             email: '',
             principal_name: '',
             capacity: '',
-            current_enrollment: '0',
             description: '',
             established_date: '',
         });
@@ -140,7 +144,6 @@ export default function DaycareManagement() {
         const mappedData = {
             ...formData,
             capacity: parseInt(formData.capacity),
-            current_enrollment: parseInt(formData.current_enrollment),
             postal_code: formData.postal_code || null,
             description: formData.description || null,
             established_date: formData.established_date || null,
@@ -173,7 +176,6 @@ export default function DaycareManagement() {
             phone: editedData.phone,
             principal_name: editedData.principal_name,
             capacity: editedData.capacity,
-            current_enrollment: editedData.current,
             description: editedData.description,
             established_date: editedData.established_date,
         };
@@ -181,7 +183,7 @@ export default function DaycareManagement() {
         router.patch(route('admin.daycare.update', editedData.id), mappedData, {
             onSuccess: () => {
                 setEditingDaycare(null);
-                setViewingDaycare(transformDaycare(editedData as InertiaDaycare));
+                setViewingDaycare(transformDaycare(editedData));
                 toast.success('Daycare updated successfully.');
             },
             onError: (errors) => {
@@ -264,8 +266,8 @@ export default function DaycareManagement() {
                     <AddDaycareDialog
                         onOpenChange={setIsAddDaycareOpen}
                         onSave={handleAddDaycare}
-                        initialForm={newDaycareForm}
-                        onSetForm={setNewDaycareForm}
+                        initialForm={newDaycareForm as any}
+                        onSetForm={setNewDaycareForm as any}
                     />
                 </Dialog>
 

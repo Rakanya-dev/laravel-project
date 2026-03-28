@@ -7,13 +7,16 @@ use App\Models\Student;
 use App\Models\Daycare;
 use App\Models\Assessment;
 use App\Models\User;
+use App\Models\Section;
+use App\Models\AssessmentDomain;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Auth\Access\AuthorizationException;
-
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Carbon;
 // 1. IMPORT THE EVENT
 use App\Events\StudentUpdated;
 
@@ -41,6 +44,10 @@ class StudentController extends Controller
 
         $daycare = Daycare::where('id', $daycareId)->first(['id', 'name']);
 
+        $sections = Section::where('daycare_id', $daycareId)
+            ->select('id', 'name', 'form_type', 'start_time', 'end_time')
+            ->get();
+
         // Fetch Students
         $students = Student::where('daycare_id', $daycareId)
             ->withTrashed()
@@ -51,6 +58,7 @@ class StudentController extends Controller
 
         // Fetch Assessments
         $assessments = Assessment::whereIn('student_id', $studentIds)
+            ->with('scores')
             ->orderBy('assessment_date', 'desc')
             ->get();
 
@@ -62,10 +70,16 @@ class StudentController extends Controller
         $assessmentsDue = max(0, $totalStudents - $completedAssessments);
         $classAverage = $assessments->where('status', 'Completed')->avg('overall_score') ?? 0;
 
+        $domains = AssessmentDomain::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name']);
+
         return Inertia::render('teacher/my-students', [
             'students' => $students,
+            'sections' => $sections,
             'assessments' => $assessments,
             'daycareName' => $daycare ? $daycare->name : 'Unassigned',
+            'domains' => $domains,
             'daycareList' => $daycareList,
             'teacherName' => $teacher->first_name . ' ' . $teacher->last_name,
             'totalStudents' => $totalStudents,
@@ -89,7 +103,7 @@ class StudentController extends Controller
             'date_of_birth' => 'required|date',
             'gender' => 'required|string|max:50',
             'nickname' => 'nullable|string|max:255',
-            'special_needs' => 'nullable|string',
+            'section_id' => 'nullable|exists:sections,id', // 👈 MUST ADD THIS
             'notes' => 'nullable|string',
         ]);
 
@@ -129,7 +143,7 @@ class StudentController extends Controller
             'date_of_birth' => 'required|date',
             'gender' => 'required|string|max:50',
             'nickname' => 'nullable|string|max:255',
-            'special_needs' => 'nullable|string',
+            'section_id' => 'nullable|exists:sections,id', // 👈 ADDED THIS
             'notes' => 'nullable|string',
         ]);
 
@@ -150,14 +164,15 @@ class StudentController extends Controller
         $student = Student::where('daycare_id', $daycareId)->findOrFail($id);
 
         $validated = $request->validate([
+            // 👇 It already accepts "Graduated" as a valid status!
             'status' => ['required', Rule::in(['Inactive', 'Graduated', 'Transferred'])],
             'reason' => 'nullable|string',
         ]);
 
         $student->status = $validated['status'];
-        $student->notes = $validated['reason'];
+        $student->notes = $validated['reason']; // Maps our "Completed ECCD Curriculum" reason
         $student->save();
-        $student->delete();
+        $student->delete(); // Soft deletes them from the active list
 
         //  4. BROADCAST ARCHIVE
         broadcast(new StudentUpdated($student, 'archive'))->toOthers();
@@ -186,22 +201,6 @@ class StudentController extends Controller
         broadcast(new StudentUpdated($student, 'restore'))->toOthers();
 
         return Redirect::route('teacher.my-students.index')->with('success', 'Student restored.');
-    }
-
-    /**
-     * Permanently delete the specified student.
-     */
-    public function permanentDelete($id)
-    {
-        $daycareId = $this->getTeacherDaycareId();
-        $student = Student::withTrashed()->where('daycare_id', $daycareId)->findOrFail($id);
-
-        // Broadcast BEFORE deleting so clients know to remove it
-        broadcast(new StudentUpdated($student, 'delete'))->toOthers();
-
-        $student->forceDelete();
-
-        return Redirect::route('teacher.my-students.index')->with('success', 'Student permanently deleted.');
     }
 
     /**
@@ -251,14 +250,14 @@ class StudentController extends Controller
             ->whereIn('id', $validated['ids'])
             ->get();
 
-        foreach($students as $student) {
-             $student->restore();
-             $student->status = $validated['status'];
-             $student->notes = null;
-             $student->save();
+        foreach ($students as $student) {
+            $student->restore();
+            $student->status = $validated['status'];
+            $student->notes = null;
+            $student->save();
 
-             //  7. BROADCAST EACH RESTORE
-             broadcast(new StudentUpdated($student, 'restore'))->toOthers();
+            //  7. BROADCAST EACH RESTORE
+            broadcast(new StudentUpdated($student, 'restore'))->toOthers();
         }
 
         return Redirect::route('teacher.my-students.index')->with('success', 'Students restored.');
@@ -280,10 +279,10 @@ class StudentController extends Controller
             ->whereIn('id', $validated['ids'])
             ->get();
 
-        foreach($students as $student) {
-             // 👇 8. BROADCAST EACH DELETE
-             broadcast(new StudentUpdated($student, 'delete'))->toOthers();
-             $student->forceDelete();
+        foreach ($students as $student) {
+            // 👇 8. BROADCAST EACH DELETE
+            broadcast(new StudentUpdated($student, 'delete'))->toOthers();
+            $student->forceDelete();
         }
 
         return Redirect::route('teacher.my-students.index')->with('success', 'Students permanently deleted.');
@@ -344,6 +343,8 @@ class StudentController extends Controller
         $file = $request->file('file');
         $path = $file->getRealPath();
         $handle = fopen($path, 'r');
+
+        // Skip the header row
         $header = fgetcsv($handle);
 
         $importedCount = 0;
@@ -353,18 +354,21 @@ class StudentController extends Controller
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
 
+            // Extract row data
             $firstName = $row[0] ?? null;
             $middleName = $row[1] ?? null;
             $lastName = $row[2] ?? null;
             $dob = $row[3] ?? null;
             $gender = $row[4] ?? null;
             $daycareName = $row[5] ?? null;
+            $sessionName = $row[6] ?? null; // 👈 NEW: The 7th column in the CSV!
 
             if (!$firstName || !$lastName || !$dob || !$daycareName) {
                 $errors[] = "Row {$rowNumber}: Missing required fields.";
                 continue;
             }
 
+            // 1. Find the Daycare
             $daycare = Daycare::where('name', 'LIKE', trim($daycareName))->first();
 
             if (!$daycare) {
@@ -372,6 +376,20 @@ class StudentController extends Controller
                 continue;
             }
 
+            // 2. Find the Section (if they provided one)
+            $sectionId = null;
+            if ($sessionName) {
+                $section = Section::where('daycare_id', $daycare->id)
+                    ->where('name', 'LIKE', '%' . trim($sessionName) . '%')
+                    ->first();
+                if ($section) {
+                    $sectionId = $section->id;
+                } else {
+                    $errors[] = "Row {$rowNumber}: Session '{$sessionName}' not found. Student imported as Unassigned.";
+                }
+            }
+
+            // 3. Create the Student
             try {
                 $student = Student::create([
                     'first_name' => trim($firstName),
@@ -380,12 +398,13 @@ class StudentController extends Controller
                     'date_of_birth' => \Carbon\Carbon::parse($dob)->format('Y-m-d'),
                     'gender' => ucfirst(strtolower(trim($gender))),
                     'daycare_id' => $daycare->id,
+                    'section_id' => $sectionId, // 👈 SAVE IT HERE
                     'status' => 'Active',
                     'access_code' => strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1)) . '-' . rand(1000, 9999),
                 ]);
                 $importedCount++;
 
-                //  9. BROADCAST IMPORTED STUDENT
+                // Broadcast
                 broadcast(new StudentUpdated($student, 'create'))->toOthers();
 
             } catch (\Exception $e) {
@@ -397,9 +416,146 @@ class StudentController extends Controller
 
         $message = "Successfully imported {$importedCount} students.";
         if (count($errors) > 0) {
-            $message .= " " . count($errors) . " rows failed. Check console or logs.";
+            $message .= " " . count($errors) . " rows had issues. Check console or logs.";
         }
 
         return redirect()->back()->with('success', $message)->with('import_errors', $errors);
     }
+
+    /**
+     * Generate the printable ECCD report for a student.
+     */
+    public function printReport($id)
+    {
+        // 1. Get the student and load their daycare and parents
+        $student = Student::with(['daycare', 'parents'])->findOrFail($id);
+
+        // 2. Get all of their assessments, and load the domains and teacher
+        $assessments = Assessment::where('student_id', $id)
+            ->with(['scores.domain', 'teacher'])
+            ->orderBy('created_at', 'asc') // Sort from oldest to newest for the columns
+            ->get();
+
+        // 3. Send them to your beautiful new Blade template!
+        return view('reports.eccd-checklist', compact('student', 'assessments'));
+    }
+
+    /**
+     * Generates and downloads a blank CSV template for the teacher.
+     */
+    public function importTemplate()
+    {
+        $headers = [
+            'Content-type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=student_import_template.csv',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        // 🚀 NEW: Added "Session Name" as the 6th column
+        $columns = ['First Name', 'Middle Name', 'Last Name', 'Date of Birth (YYYY-MM-DD)', 'Gender (Male/Female)', 'Session Name'];
+
+        $callback = function () use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            // Add a helpful example row
+            fputcsv($file, ['Juan', 'Dela', 'Cruz', '2020-05-15', 'Male', 'Morning Session']);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Reads the uploaded CSV and inserts the students into the database.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:2048',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        $data = array_map('str_getcsv', file($path));
+        array_shift($data); // Remove the header row
+
+        $daycareId = Auth::user()->daycare_id;
+        $importedCount = 0;
+
+        // Fetch all sections for this daycare so we can look up the ID quickly
+        $sections = Section::where('daycare_id', $daycareId)->get();
+
+        foreach ($data as $row) {
+            if (count($row) < 5 || empty(trim($row[0]))) {
+                continue;
+            }
+
+            // 🚀 NEW: Smart Session Matching
+            $sectionId = null;
+            $csvSessionName = trim($row[5] ?? '');
+
+            if (!empty($csvSessionName)) {
+                // Try to find a section that matches what they typed in Excel (case-insensitive)
+                $matchedSection = $sections->first(function ($sec) use ($csvSessionName) {
+                    return strtolower($sec->name) === strtolower($csvSessionName);
+                });
+
+                if ($matchedSection) {
+                    $sectionId = $matchedSection->id;
+                }
+            }
+
+            // Create the student and attach them to the correct section
+            Student::create([
+                'daycare_id' => $daycareId,
+                'section_id' => $sectionId, // 👈 Saves them to the correct session!
+                'first_name' => trim($row[0]),
+                'middle_name' => trim($row[1] ?? ''),
+                'last_name' => trim($row[2]),
+                'date_of_birth' => trim($row[3]),
+                'gender' => trim($row[4]),
+                'status' => 'Active',
+            ]);
+
+            $importedCount++;
+        }
+
+        return redirect()->back()->with('success', "Successfully imported $importedCount students into their sessions!");
+    }
+
+    // 🚀 NEW METHOD: Strictly for the Archived 1-Page PDF
+    public function printConsolidatedReport($id)
+    {
+        // 1. Fetch the student (using withTrashed so it finds archived ones)
+        $student = Student::withTrashed()
+            ->with(['daycare', 'parents'])
+            ->findOrFail($id);
+
+        // 2. Calculate the formatted_age for the Blade template
+        if ($student->date_of_birth) {
+            $student->formatted_age = Carbon::parse($student->date_of_birth)->age . ' yrs old';
+        } else {
+            $student->formatted_age = 'N/A';
+        }
+
+        // 3. Fetch the historical assessments
+        $assessments = Assessment::where('student_id', $id)
+            ->with(['scores.domain', 'teacher'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // 4. Generate the 1-page PDF
+        $pdf = Pdf::loadView('exports.report-card-pdf', [
+            'student' => $student,
+            'assessments' => $assessments
+        ]);
+
+        return $pdf->stream($student->last_name . '_Official_ECCD_Report.pdf');
+    }
 }
+

@@ -3,101 +3,174 @@
 namespace App\Http\Controllers\Parent;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use App\Models\Student;
+use Carbon\Carbon;
+use App\Models\Message;
+use App\Models\EnrollmentRequest;
+use App\Models\Daycare;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
+    /**
+     * 1. THE MAIN ENTRY POINT
+     * Look how clean this is now!
+     */
     public function index()
     {
         $parent = Auth::user();
 
+        return Inertia::render('parent/dashboard', [
+            'user' => $parent,
+            'conversations' => $this->getConversations($parent),
+            'students' => $this->getStudentsData($parent),
+            'daycares' => Daycare::select('id', 'name')->get(),
+            'pendingEnrollment' => EnrollmentRequest::where('user_id', $parent->id)->where('status', 'Pending')->first(),
+        ]);
+    }
 
-        $hasActiveChild = $parent->students()
-            ->wherePivot('status', 'active')
-            ->exists();
+    /**
+     * 2. EXTRACTED: CONVERSATION LOGIC
+     */
+    private function getConversations($parent)
+    {
+        // Get active chats
+        $existingConversations = Message::where('sender_id', $parent->id)
+            ->orWhere('recipient_id', $parent->id)
+            ->with(['sender', 'recipient'])
+            ->get()
+            ->groupBy(function ($msg) use ($parent) {
+                return $msg->sender_id === $parent->id ? $msg->recipient_id : $msg->sender_id;
+            })
+            ->map(function ($msgs) use ($parent) {
+                $lastMsg = $msgs->sortByDesc('created_at')->first();
+                $otherUser = $lastMsg->sender_id === $parent->id ? $lastMsg->recipient : $lastMsg->sender;
 
-        $hasPendingChild = $parent->students()
-            ->wherePivot('status', 'pending')
-            ->exists();
+                if (!$otherUser)
+                    return null;
 
-        if (!$hasActiveChild && $hasPendingChild) {
-             return Inertia::render('auth/pending-approval');
-        }
+                return [
+                    'contact_id' => $otherUser->id,
+                    'contact_name' => $otherUser->first_name . ' ' . $otherUser->last_name,
+                    'contact_avatar' => $otherUser->profile_photo,
+                    'contact_role' => ucfirst($otherUser->role ?? 'Teacher'),
+                    'last_message' => $lastMsg->body,
+                    'time' => $lastMsg->created_at->diffForHumans(null, true, true),
+                ];
+            })
+            ->filter()
+            ->values();
 
-        if (!$hasActiveChild && !$hasPendingChild) {
-             return Inertia::render('parent/no-child-linked');
-        }
+        // Get teachers the parent hasn't talked to yet
+        $existingContactIds = $existingConversations->pluck('contact_id')->toArray();
+        $daycareIds = $parent->students()->pluck('daycare_id')->unique();
 
-        $students = $parent->students()
-            ->wherePivot('status', 'active')
-            ->with(['daycare:id,name'])
+        $availableTeachers = User::where('role', 'teacher')
+            ->whereIn('daycare_id', $daycareIds)
+            ->whereNotIn('id', $existingContactIds)
+            ->get()
+            ->map(function ($teacher) {
+                return [
+                    'contact_id' => $teacher->id,
+                    'contact_name' => $teacher->first_name . ' ' . $teacher->last_name,
+                    'contact_avatar' => $teacher->profile_photo,
+                    'contact_role' => 'Teacher',
+                    'last_message' => 'Say hello to start the conversation!',
+                    'time' => '',
+                ];
+            });
+
+        return collect($existingConversations)->concat($availableTeachers)->values();
+    }
+
+    /**
+     * 3. EXTRACTED: STUDENT DATA LOGIC
+     */
+    private function getStudentsData($parent)
+    {
+        return $parent->students()
+            ->with(['daycare', 'assessments.scores.domain', 'assessments.teacher', 'reports'])
             ->get()
             ->map(function ($child) {
-                $allAssessments = $child->assessments()
-                    ->with(['scores.domain'])
-                    ->orderBy('assessment_date', 'desc')
-                    ->get()
-                    ->map(function ($assessment) {
-                        return [
-                            'id' => $assessment->id,
-                            'evaluation' => 'Evaluation #' . $assessment->id,
-                            'evaluator' => $assessment->teacher ? $assessment->teacher->first_name . ' ' . $assessment->teacher->last_name : 'Unknown',
-                            'dateCreated' => $assessment->assessment_date ? $assessment->assessment_date->format('Y-m-d') : now()->format('Y-m-d'),
-                            'standardScore' => $assessment->overall_score ?? 0,
-                            'sumOfScaled' => 0,
-                            'assessmentSummary' => $assessment->overall_notes,
-                            'recommendation' => $assessment->recommendations,
-                            'nextAssessmentDue' => $assessment->next_assessment_date ? $assessment->next_assessment_date->format('Y-m-d') : 'TBD',
-                            'domainScores' => $assessment->scores->map(function($score) {
-                                return [
-                                    'domain' => $score->domain->name,
-                                    'rawScore' => $score->score,
-                                    'scaledScore' => 0,
-                                    'interpretation' => $score->rating ?? 'Pending'
-                                ];
-                            }),
-                        ];
-                    });
-
-                // Get the very last assessment for the "Progress" summary card
-                $lastAssessment = $child->assessments()
-                    ->with(['scores.domain'])
-                    ->latest('assessment_date')
-                    ->first();
-
-                $progressData = [];
-
-                if ($lastAssessment) {
-                    $progressData = $lastAssessment->scores->map(function($score) {
-                        $max = $score->max_score > 0 ? $score->max_score : 10;
-                        $percentage = ($score->score / $max) * 100;
-
-                        return [
-                            'name' => $score->domain->name,
-                            'score' => $score->score,
-                            'max' => $max,
-                            'percentage' => round($percentage),
-                        ];
-                    });
-                }
+                $sortedAssessments = $child->assessments->sortByDesc('assessment_date');
+                $lastAssessment = $sortedAssessments->first();
+                $latestReport = $child->reports->sortByDesc('report_date')->first();
 
                 return [
                     'id' => $child->id,
                     'name' => $child->first_name . ' ' . $child->last_name,
-                    'age' => $child->age_years ?? 0,
-                    'daycare' => $child->daycare->name ?? 'Unknown',
-                    'progress' => $progressData,
-                    'attendance' => 95,
-                    'last_assessment_date' => $lastAssessment && $lastAssessment->assessment_date ? $lastAssessment->assessment_date->format('M d, Y') : 'N/A',
-                    'assessments' => $allAssessments,
+                    'daycare' => $child->daycare->name ?? 'Unknown Daycare',
+                    'age' => ($child->age_years ?? 0) . ' yrs',
+                    'overview' => [
+                        'next_due' => $lastAssessment && $lastAssessment->next_assessment_date ? Carbon::parse($lastAssessment->next_assessment_date)->format('M d, Y') : 'TBD',
+                        'latest_report_id' => $latestReport ? $latestReport->id : null,
+                        'progress_summary' => $this->calculateProgressSummary($lastAssessment)
+                    ],
+                    'assessments' => $sortedAssessments->map(function ($a) {
+                        return [
+                            'id' => $a->id,
+                            'evaluation' => $a->assessment_type ?? 'Assessment',
+                            'evaluator' => $a->teacher ? ($a->teacher->first_name . ' ' . $a->teacher->last_name) : 'Daycare Teacher',
+                            'dateCreated' => $a->assessment_date ?? $a->created_at,
+                            'standardScore' => (int) $a->standard_score,
+                            'sumOfScaled' => (int) $a->sum_of_scaled,
+                            'assessmentSummary' => $a->remarks ?? '',
+                            'recommendation' => $a->recommendation ?? '',
+                            'nextAssessmentDue' => $a->next_assessment_date ? Carbon::parse($a->next_assessment_date)->format('M d, Y') : 'TBD',
+                            'assessment_type' => $a->assessment_type,
+                            'assessment_date' => $a->assessment_date ?? $a->created_at,
+                            'overall_score' => $a->overall_score ?? $a->standard_score,
+                            'status' => $a->status,
+                            'scores' => $a->scores,
+                        ];
+                    })->values(),
+                    'reports' => $sortedAssessments->where('status', 'Completed')->count() > 0
+                        ? collect([
+                            [
+                                'id' => $child->id,
+                                'title' => 'Official ECCD Report Card',
+                                'type' => 'Consolidated Record',
+                                'evaluator' => 'Daycare Administration',
+                                'date' => now()->toDateString(),
+                                'summary' => 'This is the official compilation of developmental milestones achieved by ' . $child->first_name . '.',
+                                'badge' => 'bg-indigo-100 text-indigo-800'
+                            ]
+                        ])
+                        : collect([]),
                 ];
             });
+    }
 
-        return Inertia::render('parent/dashboard', [
-            'students' => $students
-        ]);
+    /**
+     * 4. EXTRACTED: SCORE CALCULATION MATH
+     */
+    private function calculateProgressSummary($lastAssessment)
+    {
+        if (!$lastAssessment || !$lastAssessment->scores)
+            return [];
+
+        $totalMonths = (($lastAssessment->age_years ?? 0) * 12) + ($lastAssessment->age_months ?? 0);
+        $isEccd = $totalMonths >= 37;
+
+        return $lastAssessment->scores->map(function ($score) use ($isEccd) {
+            $itedMaxScores = [
+                'Gross Motor' => 13,
+                'Fine Motor' => 11,
+                'Self-Help' => 27,
+                'Receptive Language' => 5,
+                'Expressive Language' => 8,
+                'Cognitive' => 21,
+                'Socio-Emotional' => 24,
+            ];
+
+            $fullMark = $isEccd ? 19 : (float) ($score->max_score ?: ($itedMaxScores[$score->domain->name] ?? 20));
+
+            return [
+                'name' => $score->domain ? $score->domain->name : 'Domain',
+                'score' => $isEccd ? (float) ($score->scaled_score ?? 0) : (float) ($score->score ?? 0),
+                'fullMark' => $fullMark,
+            ];
+        })->values();
     }
 }

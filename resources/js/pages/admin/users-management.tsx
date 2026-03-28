@@ -5,23 +5,12 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 
 import { NewTeacher } from '@/components/admin/add-teacher-dialog';
-import AdminUserManagement, { User as ComponentUser } from '@/components/admin/admin-users-management';
+import AdminUserManagement, { User as ComponentUser } from '@/components/admin/admin-user-management';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/admin/dashboard' },
     { title: 'Users Management', href: '/admin/users-management' },
 ];
-
-interface PendingRequest {
-    link_id: number;
-    parent_id: number;
-    parent_first: string;
-    parent_last: string;
-    parent_email: string;
-    child_first: string;
-    child_last: string;
-    created_at: string;
-}
 
 export default function UsersManagement() {
     type ExtendedUser = InertiaUser & {
@@ -29,30 +18,37 @@ export default function UsersManagement() {
     };
 
     type UsersManagementPageProps = PageProps & {
-        teachers: { data: ExtendedUser[]; meta: any };
-        parents: { data: ExtendedUser[]; meta: any };
+        teachers: { data: ExtendedUser[]; total: number; from: number; to: number; links: any[] };
+        parents: { data: ExtendedUser[]; total: number; from: number; to: number; links: any[] };
         daycares: { id: number; name: string }[];
-        pendingRequests: PendingRequest[];
     };
+    const { teachers, parents, daycares } = usePage<UsersManagementPageProps>().props;
 
-    const { teachers, parents, daycares, pendingRequests } = usePage<UsersManagementPageProps>().props;
-
-    // 2. Transform data
+    // Transform data
     const daycareList = daycares.map((d) => d.name);
 
     const mapUser = (user: ExtendedUser): ComponentUser => {
-        const childName =
-            user.students && user.students.length > 0 ? `${user.students[0].first_name} ${user.students[0].last_name}` : 'No Child Linked';
+        const firstChild = user.students && user.students.length > 0 ? user.students[0] : null;
+        const childName = firstChild ? `${firstChild.first_name} ${firstChild.last_name}` : 'No Child Linked';
+
+        // 🚀 THE FIX: If the user is a parent, grab the daycare from their child!
+        let resolvedDaycare = '-';
+        if (user.role === 'teacher' && user.daycare) {
+            resolvedDaycare = user.daycare.name;
+        } else if (user.role === 'parent' && firstChild && firstChild.daycare) {
+            // @ts-ignore - Assuming the child object has the daycare attached via the backend
+            resolvedDaycare = firstChild.daycare.name || '-';
+        }
 
         return {
             id: user.id,
-            firstName: user.first_name,
-            middleName: user.middle_name || '',
-            lastName: user.last_name,
+            first_name: user.first_name,
+            middle_name: user.middle_name || '',
+            last_name: user.last_name,
             email: user.email,
             phone: user.phone || '',
-            daycare: user.daycare?.name || '-',
-            status: user.status || 'active',
+            daycare: resolvedDaycare, // 🚀 Uses our new logic
+            status: user.status || 'Active',
             role: user.role,
             childName: childName,
         };
@@ -61,7 +57,7 @@ export default function UsersManagement() {
     const mappedTeachers = teachers.data.map(mapUser);
     const mappedParents = parents.data.map(mapUser);
 
-    // 4. Implement action handlers
+    // Implement action handlers
     const onAddTeacher = (teacher: NewTeacher) => {
         const daycare = daycares.find((d) => d.name === teacher.daycare);
 
@@ -76,6 +72,7 @@ export default function UsersManagement() {
                 password: teacher.password,
                 password_confirmation: teacher.password_confirmation,
                 daycare_id: daycare?.id,
+                role: 'teacher' // 🚀 Ensure role is passed
             },
             {
                 onSuccess: () => toast.success('Teacher added successfully.'),
@@ -94,9 +91,9 @@ export default function UsersManagement() {
         router.patch(
             route('admin.users.update', user.id),
             {
-                first_name: user.firstName,
-                middle_name: user.middleName,
-                last_name: user.lastName,
+                first_name: user.first_name || user.firstName,
+                middle_name: user.middle_name || user.middleName,
+                last_name: user.last_name || user.lastName,
                 email: user.email,
                 phone: user.phone,
                 daycare_id: daycare?.id,
@@ -107,29 +104,6 @@ export default function UsersManagement() {
                     console.error(e);
                     toast.error('Failed to update user.');
                 },
-                preserveScroll: true,
-            },
-        );
-    };
-    const onApproveRequest = (linkId: number) => {
-        router.post(
-            route('admin.users.approve', linkId),
-            {},
-            {
-                onSuccess: () => toast.success('Parent approved.'),
-                onError: () => toast.error('Failed to approve.'),
-                preserveScroll: true,
-            },
-        );
-    };
-
-    const onRejectRequest = (linkId: number) => {
-        router.post(
-            route('admin.users.reject', linkId),
-            {},
-            {
-                onSuccess: () => toast.success('Request rejected.'),
-                onError: () => toast.error('Failed to reject.'),
                 preserveScroll: true,
             },
         );
@@ -154,15 +128,14 @@ export default function UsersManagement() {
 
             <div className="p-4 sm:p-6 lg:p-8">
                 <AdminUserManagement
-                    teachers={mappedTeachers}
-                    parents={mappedParents}
-                    pendingRequests={pendingRequests}
+                    // 🚀 THE FIX: Pass the whole paginator object, but overwrite the .data array with our mapped users
+                    teachers={{ ...teachers, data: mappedTeachers }}
+                    parents={{ ...parents, data: mappedParents }}
+                    // 🚀 REMOVED the separate pagination props entirely!
                     daycareList={daycareList}
                     onAddTeacher={onAddTeacher}
                     onEditParent={onEditUser}
                     onEditTeacher={onEditUser}
-                    onApproveRequest={onApproveRequest}
-                    onRejectRequest={onRejectRequest}
                     onDeleteUser={onDeleteUser}
                     onExportData={onExportData}
                 />

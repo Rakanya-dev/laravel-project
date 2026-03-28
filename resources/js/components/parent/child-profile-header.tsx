@@ -36,7 +36,7 @@ export function ChildProfileHeader({ child, parentName }: ChildProfileHeaderProp
     };
 
     return (
-        <Card className="overflow-hidden border-none shadow-sm bg-gradient-to-r from-blue-50 to-white">
+        <Card className="overflow-hidden border-none shadow-sm bg-linear-to-r from-blue-50 to-white">
             <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
 
