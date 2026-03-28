@@ -88,7 +88,6 @@ export default function AdminUserManagement({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
-                        <Users className="size-6 text-indigo-600" />
                         ECCD User Management
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
