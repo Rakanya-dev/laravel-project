@@ -1,25 +1,13 @@
 {
-    "version": 2,
-    "functions": {
-        "api/index.php": {
-            "runtime": "vercel-php@0.9.0",
-            "env": {
-                "PHP_INI_ERROR_REPORTING": "E_ALL & ~E_DEPRECATED"
-            }
-        }
-    },
-    "routes": [
-        {
-            "src": "/build/(.*)",
-            "dest": "/public/build/$1"
-        },
-        {
-            "src": "/(css|js|images|fonts)/(.*)",
-            "dest": "/public/$1/$2"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/api/index.php"
-        }
-    ]
+  "version": 2,
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.9.0"
+    }
+  },
+  "routes": [
+    { "src": "/build/(.*)", "dest": "/public/build/$1" },
+    { "src": "/(css|js|images|fonts)/(.*)", "dest": "/public/$1/$2" },
+    { "src": "/(.*)", "dest": "/api/index.php" }
+  ]
 }
