@@ -17,13 +17,9 @@ return new class extends Migration {
             $table->string('last_name');
             $table->string('middle_name')->nullable();
             $table->string('phone');
-            $table->string('address')->nullable();
-            $table->string('city')->nullable();
-            $table->string('province')->nullable();
-            $table->string('postal_code')->nullable();
             $table->date('date_of_birth')->nullable();
             $table->string('profile_photo')->nullable();
-            $table->string('status')->default('active');
+            $table->string('status')->default('Active');
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->softDeletes();
