@@ -1,7 +1,7 @@
 import AppHeaderLayout from '@/layouts/app/app-header-layout';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { type BreadcrumbItem } from '@/types';
-import { usePage } from '@inertiajs/react';
+import { usePage, usePoll } from '@inertiajs/react';
 import { type ReactNode } from 'react';
 
 interface AppLayoutProps {
@@ -10,6 +10,8 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, breadcrumbs, ...props }: AppLayoutProps) {
+    usePoll(1000, {}, { keepAlive: true });
+
     // 1. Get the authenticated user from Inertia props
     const { auth } = usePage().props as any;
 
@@ -25,7 +27,6 @@ export default function AppLayout({ children, breadcrumbs, ...props }: AppLayout
             </AppHeaderLayout>
         );
     }
-
     // Admins and Teachers get the Sidebar layout
     return (
         <AppSidebarLayout breadcrumbs={breadcrumbs} {...props}>

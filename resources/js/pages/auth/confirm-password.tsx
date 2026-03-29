@@ -1,6 +1,6 @@
 // Components
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, ArrowLeft } from 'lucide-react'; // 🚀 Added ArrowLeft
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -22,6 +22,11 @@ export default function ConfirmPassword() {
         });
     };
 
+    // 🚀 NEW: Safely cancel the sensitive action and return to the previous page
+    const handleGoBack = () => {
+        window.history.back();
+    };
+
     return (
         <AuthLayout
             title="Confirm your password"
@@ -29,32 +34,52 @@ export default function ConfirmPassword() {
         >
             <Head title="Confirm password" />
 
-            <form onSubmit={submit}>
-                <div className="space-y-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            name="password"
-                            placeholder="Password"
-                            autoComplete="current-password"
-                            value={data.password}
-                            autoFocus
-                            onChange={(e) => setData('password', e.target.value)}
-                        />
+            <div className="space-y-6">
 
-                        <InputError message={errors.password} />
-                    </div>
+                {/* 🚀 NEW: Back Button */}
+                <button
+                    type="button"
+                    onClick={handleGoBack}
+                    disabled={processing}
+                    className="flex items-center text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground disabled:opacity-50"
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Go Back
+                </button>
 
-                    <div className="flex items-center">
-                        <Button className="w-full" disabled={processing}>
-                            {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                            Confirm password
-                        </Button>
+                <form onSubmit={submit}>
+                    <div className="space-y-6">
+                        <div className="grid gap-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                name="password"
+                                placeholder="Password"
+                                autoComplete="current-password"
+                                value={data.password}
+                                autoFocus
+                                onChange={(e) => setData('password', e.target.value)}
+                            />
+
+                            <InputError message={errors.password} />
+                        </div>
+
+                        <div className="flex items-center">
+                            <Button className="w-full" disabled={processing}>
+                                {processing ? (
+                                    <>
+                                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                        Confirming...
+                                    </>
+                                ) : (
+                                    'Confirm password'
+                                )}
+                            </Button>
+                        </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </AuthLayout>
     );
 }

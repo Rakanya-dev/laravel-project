@@ -13,7 +13,7 @@ type RegisterForm = {
     middle_name: string;
     last_name: string;
     email: string;
-    contact_number: string;
+    phone: string;
     password: string;
     password_confirmation: string;
 };
@@ -24,7 +24,7 @@ export default function Register() {
         middle_name: '',
         last_name: '',
         email: '',
-        contact_number: '63',
+        phone: '63',
         password: '',
         password_confirmation: '',
     });
@@ -112,23 +112,23 @@ export default function Register() {
                                 <span className="flex h-4 items-center justify-center border-r border-gray-300 pr-2 text-sm text-gray-500">+63</span>
                             </div>
                             <Input
-                                id="contact_number"
+                                id="phone"
                                 type="tel"
                                 className="pl-14 tabular-nums"
                                 placeholder="912 345 6789"
                                 maxLength={14}
-                                value={getFormattedPhone(data.contact_number)}
+                                value={getFormattedPhone(data.phone)}
                                 onChange={(e) => {
                                     let raw = e.target.value.replace(/\D/g, '');
                                     if (raw.startsWith('0')) raw = raw.substring(1);
                                     if (raw.length > 10) raw = raw.substring(0, 10);
-                                    setData('contact_number', '63' + raw);
+                                    setData('phone', '63' + raw);
                                 }}
                                 required
                                 autoComplete="tel"
                             />
                         </div>
-                        <InputError message={errors.contact_number} />
+                        <InputError message={errors.phone} />
                     </div>
 
                     {/* Passwords */}

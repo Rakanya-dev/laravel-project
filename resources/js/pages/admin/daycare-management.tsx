@@ -20,7 +20,6 @@ import DaycareOverview from '@/components/admin/admin-daycare-overview';
 import DaycareDetailsView from '@/components/admin/daycare-details-view';
 import DaycareEditForm from '@/components/admin/daycare-edit-form';
 
-// 🚀 IMPORT NEW DATE TOOLKIT
 import { formatForInput } from '@/utils/date';
 
 export interface Daycare extends InertiaDaycare {
@@ -29,6 +28,7 @@ export interface Daycare extends InertiaDaycare {
     current: number;
     percentage: number;
     current_enrollment?: number;
+    teachers?: string[]; // 🚀 Added to main interface
 }
 
 export interface DaycareFormData {
@@ -43,21 +43,24 @@ export interface DaycareFormData {
     capacity: string;
     description: string;
     established_date: string;
+    teachers?: string[]; // 🚀 Ensure array is here
 }
 
 const calculatePercentage = (current: number, capacity: number) => Math.round((current / capacity) * 100) || 0;
 
-// 🚀 REFACTORED: Now uses the global helper!
 const transformDaycare = (d: any): Daycare => {
     const currentEnrollment = d.current_enrollment || 0;
 
+    // 🚀 Gracefully handle the transition from single 'principal_name' string to 'teachers' array
+    const teachersList = Array.isArray(d.teachers) ? d.teachers : (d.principal_name ? [d.principal_name] : []);
+
     return {
         ...d,
-        teacher: d.principal_name || 'Unassigned',
+        teachers: teachersList,
+        teacher: teachersList.length > 0 ? teachersList.join(', ') : 'Unassigned', // Keep for backward compatibility
         location: `${d.city}, ${d.province}`,
         current: currentEnrollment,
         percentage: calculatePercentage(currentEnrollment, d.capacity),
-        // 🚀 USES NEW HELPER TO PREVENT TIMEZONE SHIFTS
         established_date: formatForInput(d.established_date),
     };
 };
@@ -94,13 +97,21 @@ export default function DaycareManagement() {
         capacity: '',
         description: '',
         established_date: '',
+        teachers: [], // 🚀 Initialized as empty array
     });
 
     useEffect(() => {
         const fetchTeachers = async () => {
             try {
-                const response = await fetch(route('admin.teachers.list'));
+                // 🚀 NEW: If we are editing a daycare, attach its ID to the URL
+                // so the backend knows to include its currently assigned teachers in the list!
+                const url = editingDaycare
+                    ? route('admin.teachers.list', { daycare_id: editingDaycare.id })
+                    : route('admin.teachers.list');
+
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('Failed to fetch teacher list.');
+
                 const data = await response.json();
                 setAvailableTeachers(data.teachers);
             } catch (error) {
@@ -108,8 +119,11 @@ export default function DaycareManagement() {
                 toast.error('Could not load teacher list for dropdowns.');
             }
         };
+
+        // 🚀 NEW: Add editingDaycare to the dependency array so it re-fetches
+        // the correct list every time you click "Edit" on a different center.
         fetchTeachers();
-    }, []);
+    }, [editingDaycare]);
 
     useEffect(() => {
         if (viewingDaycare) {
@@ -138,6 +152,7 @@ export default function DaycareManagement() {
             capacity: '',
             description: '',
             established_date: '',
+            teachers: [], // 🚀 Reset to empty array
         });
 
     const handleAddDaycare = async (formData: DaycareFormData) => {
@@ -148,6 +163,7 @@ export default function DaycareManagement() {
             description: formData.description || null,
             established_date: formData.established_date || null,
             principal_name: formData.principal_name || null,
+            teachers: formData.teachers || [], // 🚀 Pass teachers array to the backend
         };
 
         router.post(route('admin.daycare.store'), mappedData, {
@@ -178,6 +194,7 @@ export default function DaycareManagement() {
             capacity: editedData.capacity,
             description: editedData.description,
             established_date: editedData.established_date,
+            teachers: editedData.teachers || [], // 🚀 Pass updated teachers array to backend
         };
 
         router.patch(route('admin.daycare.update', editedData.id), mappedData, {
@@ -268,6 +285,7 @@ export default function DaycareManagement() {
                         onSave={handleAddDaycare}
                         initialForm={newDaycareForm as any}
                         onSetForm={setNewDaycareForm as any}
+                        availableTeachers={availableTeachers} // 🚀 Passed list down to Dialog
                     />
                 </Dialog>
 

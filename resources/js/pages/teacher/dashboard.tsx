@@ -20,6 +20,7 @@ export interface Student {
     nextDue?: string;
     parentName: string;
     parentEmail: string;
+    latestAssessmentId?: number; // 👈 ADD THIS LINE
 }
 
 interface TeacherDashboardPageProps extends PageProps {
@@ -52,8 +53,14 @@ export default function TeacherDashboard() {
     const [isAddAssessmentOpen, setIsAddAssessmentOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- 1. POLLING LOGIC ---
+    // --- 1. POLLING & URL LOGIC ---
     useEffect(() => {
+        // 🚀 NEW: Check the URL for the 'action' parameter to auto-open the modal
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('action') === 'new-assessment') {
+            setIsAddAssessmentOpen(true);
+        }
+
         const refreshData = () => {
             if (document.hidden) return;
 
@@ -85,7 +92,7 @@ export default function TeacherDashboard() {
                 lastAssessment: latestAssessment?.assessment_date ? new Date(latestAssessment.assessment_date).toLocaleDateString() : 'Not Started',
 
                 score: latestAssessment?.overall_score ? Number(latestAssessment.overall_score) : undefined,
-
+                latestAssessmentId: latestAssessment?.id, // 👈 ADD THIS LINE
                 nextDue: 'N/A',
                 parentName: parent ? `${parent.first_name} ${parent.last_name}` : 'Not Linked',
                 parentEmail: parent?.email || 'N/A',
@@ -93,7 +100,7 @@ export default function TeacherDashboard() {
         });
     }, [rawStudents, assessments]);
 
-    // 👇 ADDED SMART SORTER LOGIC HERE
+    // SMART SORTER LOGIC
     const dropdownStudents = useMemo(() => {
         return studentsList.map((s) => {
             const history = (assessments || []).filter(a => a.student_id === s.id);
@@ -154,7 +161,6 @@ export default function TeacherDashboard() {
             route('teacher.assessments.bulk-store'),
             { assessments: payload, domain_ids: domainIds },
             {
-                // 👇 CLEANED UP ONSUCCESS
                 onSuccess: () => {
                     toast.success(`${payload.length} draft(s) created successfully!`);
                     setIsAddAssessmentOpen(false);
@@ -167,10 +173,27 @@ export default function TeacherDashboard() {
         );
     };
 
-    const onViewStudents = () => router.visit(route('teacher.my-students.index'));
-    const onViewMessages = () => router.visit(route('teacher.messages'));
-    const onViewAssessments = () => router.visit(route('teacher.assessment-management'));
-    const onStudentClick = (student: Student) => toast.info(`Viewing student: ${student.firstName}`);
+    // 🚀 NEW: Updated the routing for Students to automatically go to the 'roster' tab just in case
+    const onViewStudents = () => router.visit(route('teacher.my-students.index', { tab: 'roster' }));
+
+    // 👇 FIX 1: Change to messages.index (global route)
+    const onViewMessages = () => router.visit(route('messages.index'));
+
+    // 👇 FIX 2: Change to teacher.assessments-management (added the 's')
+    const onViewAssessments = () => router.visit(route('teacher.assessments-management'));
+
+    const onStudentClick = (student: Student) => {
+        if (student.status === 'Draft' || student.status === 'In Progress') {
+            // If they have a draft, route directly to the Edit Form using the assessment ID!
+            if (student.latestAssessmentId) {
+                router.visit(route('teacher.assessments.edit', student.latestAssessmentId));
+            }
+        } else {
+            // If they are 'Not Started', pop open the New Assessment modal
+            setIsAddAssessmentOpen(true);
+            toast.info(`Select ${student.firstName} from the dropdown to begin.`);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

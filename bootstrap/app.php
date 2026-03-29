@@ -1,5 +1,4 @@
 <?php
-use App\Http\Middleware\EnsureUserIsActive; // Import your middleware
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -7,6 +6,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use App\Http\Middleware\RedirectBasedOnRole;
+use App\Http\Middleware\CheckRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,10 +23,15 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+        $middleware->redirectTo(
+            guests: '/login',
+            users: '/redirect-by-role'
+        );
         $middleware->alias([
             'role.redirect' => RedirectBasedOnRole::class,
-            'user.active' => EnsureUserIsActive::class,
+            'role' => CheckRole::class,
         ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

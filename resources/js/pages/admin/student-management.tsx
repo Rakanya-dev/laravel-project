@@ -167,6 +167,18 @@ export default function StudentManagement() {
     const [allStudents, setAllStudents] = useState<Student[]>(() => rawStudents.map(transformStudent));
     const [pendingList, setPendingList] = useState<PendingEnrollment[]>(rawPending || []);
     const [activeTab, setActiveTab] = useState('roster');
+    useEffect(() => {
+        // Read the URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+
+        // If the URL has ?tab=pending, switch the tab automatically
+        if (tabParam === 'pending') {
+            setActiveTab('pending');
+        } else if (tabParam === 'roster') {
+            setActiveTab('roster');
+        }
+    }, []);
 
     const [reviewingEnrollment, setReviewingEnrollment] = useState<PendingEnrollment | null>(null);
     const [selectedSectionId, setSelectedSectionId] = useState<string>('');

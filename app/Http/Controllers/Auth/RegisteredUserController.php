@@ -30,7 +30,7 @@ class RegisteredUserController extends Controller
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
-            'contact_number' => ['required', 'string', 'regex:/^63\d{10}$/'],
+            'phone' => ['required', 'string', 'regex:/^63\d{10}$/'],
             'password' => ['required', 'confirmed', Password::defaults()],
         ]);
 
@@ -40,7 +40,7 @@ class RegisteredUserController extends Controller
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
             'email' => $request->email,
-            'phone' => $request->contact_number,
+            'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'role' => 'parent',
             'status' => 'Active', // The user account is active immediately
@@ -52,6 +52,6 @@ class RegisteredUserController extends Controller
         Auth::login($user);
 
         // 4. Send them to the Dashboard (which will automatically show the "Enroll Your Child" form!)
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('role.redirect', absolute: false));
     }
 }

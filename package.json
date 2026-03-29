@@ -2,9 +2,10 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "composer intall --no-dev && vite build",
+        "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
+        "start": "concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#8b5cf6,#10b981\" \"php artisan serve --no-reload\" \"php artisan queue:listen --tries=1\" \"npm run dev\"",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
@@ -23,11 +24,9 @@
         "eslint-config-prettier": "^6.15.0",
         "eslint-plugin-react": "^7.37.3",
         "eslint-plugin-react-hooks": "^5.1.0",
-        "laravel-echo": "^2.3.1",
         "prettier": "^3.4.2",
         "prettier-plugin-organize-imports": "^4.1.0",
         "prettier-plugin-tailwindcss": "^0.6.11",
-        "pusher-js": "^8.4.3",
         "typescript-eslint": "^8.14.0"
     },
     "overrides": {
@@ -64,6 +63,7 @@
         "gif.js": "^0.2.0",
         "globals": "^15.14.0",
         "html2canvas": "^1.4.1",
+        "input-otp": "^1.4.2",
         "laravel-vite-plugin": "^1.0",
         "lucide-react": "^0.475.0",
         "react": "^19.0.0",

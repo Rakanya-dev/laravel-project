@@ -36,7 +36,6 @@ class UsersController extends Controller
 
             if ($daycare !== 'all') {
                 $query->where(function ($q) use ($daycare) {
-                    // 🚀 RESTORED: Back to native 'daycare' relationship
                     $q->whereHas('daycare', fn($d) => $d->where('name', $daycare))
                         ->orWhereHas('students.daycare', fn($d) => $d->where('name', $daycare));
                 });
@@ -96,7 +95,16 @@ class UsersController extends Controller
         if ($validated['role'] === 'teacher') {
             $daycare = Daycare::find($validated['daycare_id']);
             if ($daycare) {
+                // Keep old column for backward compatibility
                 $daycare->principal_name = $newUser->full_name;
+
+                // 🚀 Sync with the new JSON array column
+                $currentTeachers = is_array($daycare->teachers) ? $daycare->teachers : [];
+                if (!in_array($newUser->full_name, $currentTeachers)) {
+                    $currentTeachers[] = $newUser->full_name;
+                    $daycare->teachers = $currentTeachers;
+                }
+
                 $daycare->save();
             }
         }
@@ -122,7 +130,7 @@ class UsersController extends Controller
             ],
             'phone' => 'required',
             'daycare_id' => 'required|exists:daycares,id',
-            'status' => 'required|in:Active,Pending,Inactive', // 🚀 Make sure status can be saved!
+            'status' => 'required|in:Active,Pending,Inactive',
         ]);
 
         $user->update($validated);
@@ -134,10 +142,22 @@ class UsersController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // 🚀 Bonus Fix: Use daycareCenter relationship here too just in case!
-        if ($user->daycareCenter && $user->daycareCenter->principal_name === $user->full_name) {
-            $user->daycareCenter->principal_name = null;
-            $user->daycareCenter->save();
+        if ($user->daycareCenter) {
+            $daycare = $user->daycareCenter;
+
+            // Clean up old column
+            if ($daycare->principal_name === $user->full_name) {
+                $daycare->principal_name = null;
+            }
+
+            // 🚀 Clean up new JSON array column
+            $currentTeachers = is_array($daycare->teachers) ? $daycare->teachers : [];
+            if (($key = array_search($user->full_name, $currentTeachers)) !== false) {
+                unset($currentTeachers[$key]);
+                $daycare->teachers = array_values($currentTeachers); // re-index array
+            }
+
+            $daycare->save();
         }
 
         $user->delete();
@@ -155,18 +175,43 @@ class UsersController extends Controller
         return Excel::download(new UsersExport($userType), $filename);
     }
 
-    public function getTeacherList(): JsonResponse
+    // 🚀 NEW: Strict Assignment Logic Added Here!
+    public function getTeacherList(Request $request): JsonResponse
     {
-        $teachers = User::where('role', 'teacher')
+        // Check if the frontend passed a specific daycare ID that we are currently editing
+        $currentDaycareId = $request->query('daycare_id');
+
+        // 1. Find all daycares EXCEPT the one we are editing
+        $query = Daycare::query();
+        if ($currentDaycareId) {
+            $query->where('id', '!=', $currentDaycareId);
+        }
+
+        // 2. Get all teachers currently assigned to those other daycares
+        $assignedTeachers = $query->pluck('teachers')
+            ->flatten()
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        // 3. Fetch all active users with the 'teacher' role
+        $activeTeachers = User::where('role', 'teacher')
             ->where('status', 'active')
             ->get(['id', 'first_name', 'middle_name', 'last_name']);
 
-        $teacherNames = $teachers->map(function ($user) {
-            return $user->full_name;
-        })->toArray();
+        // 4. Map to full_name and EXCLUDE the ones already assigned elsewhere
+        $availableTeacherNames = $activeTeachers
+            ->map(function ($user) {
+                return $user->full_name;
+            })
+            ->reject(function ($fullName) use ($assignedTeachers) {
+                return in_array($fullName, $assignedTeachers);
+            })
+            ->values() // Reset array keys after rejecting
+            ->toArray();
 
         return response()->json([
-            'teachers' => $teacherNames
+            'teachers' => $availableTeacherNames
         ]);
     }
 }

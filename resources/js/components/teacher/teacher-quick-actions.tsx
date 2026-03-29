@@ -1,93 +1,92 @@
-import { Plus, Users, MessageSquare, ClipboardList } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Plus, Users, MessageSquare, ClipboardList, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface QuickAction {
-  icon: React.ElementType;
-  label: string;
-  description: string;
-  color: string;
-  iconBg: string;
-  onClick: () => void;
+    icon: React.ElementType;
+    label: string;
+    description: string;
+    color: string;
+    iconBg: string;
+    hoverBg: string;
+    onClick: () => void;
 }
 
 interface TeacherQuickActionsProps {
-  onNewAssessment?: () => void;
-  onViewStudents?: () => void;
-  onViewMessages?: () => void;
-  onViewAssessments?: () => void;
+    onNewAssessment?: () => void;
+    onViewStudents?: () => void;
+    onViewMessages?: () => void;
+    onViewAssessments?: () => void;
 }
 
 export function TeacherQuickActions({
-  onNewAssessment = () => {},
-  onViewStudents = () => {},
-  onViewMessages = () => {},
-  onViewAssessments = () => {}
+    onNewAssessment = () => { },
+    onViewStudents = () => { },
+    onViewMessages = () => { },
+    onViewAssessments = () => { }
 }: TeacherQuickActionsProps) {
-  const actions: QuickAction[] = [
-    {
-      icon: Plus,
-      label: 'New Assessment',
-      description: 'Create assessment for student',
-      color: 'text-blue-600',
-      iconBg: 'bg-blue-100',
-      onClick: onNewAssessment
-    },
-    {
-      icon: Users,
-      label: 'View All Students',
-      description: 'Manage your student list',
-      color: 'text-purple-600',
-      iconBg: 'bg-purple-100',
-      onClick: onViewStudents
-    },
-    {
-      icon: MessageSquare,
-      label: 'Messages',
-      description: 'Communicate with parents & admin',
-      color: 'text-green-600',
-      iconBg: 'bg-green-100',
-      onClick: onViewMessages
-    },
-    {
-      icon: ClipboardList,
-      label: 'Assessments',
-      description: 'View and manage assessments',
-      color: 'text-orange-600',
-      iconBg: 'bg-orange-100',
-      onClick: onViewAssessments
-    }
-  ];
+    const actions: QuickAction[] = [
+        {
+            icon: Plus,
+            label: 'New Assessment',
+            description: 'Start grading a student',
+            color: 'text-indigo-600',
+            iconBg: 'bg-indigo-50',
+            hoverBg: 'hover:border-indigo-200 hover:bg-indigo-50/30',
+            onClick: onNewAssessment
+        },
+        {
+            icon: ClipboardList,
+            label: 'Manage Assessments',
+            description: 'Resume grading & complete drafts',
+            color: 'text-emerald-600',
+            iconBg: 'bg-emerald-50',
+            hoverBg: 'hover:border-emerald-200 hover:bg-emerald-50/30',
+            onClick: onViewAssessments
+        },
+        {
+            icon: Users,
+            label: 'Class Roster',
+            description: 'View student profiles',
+            color: 'text-blue-600',
+            iconBg: 'bg-blue-50',
+            hoverBg: 'hover:border-blue-200 hover:bg-blue-50/30',
+            onClick: onViewStudents
+        },
+        {
+            icon: MessageSquare,
+            label: 'Messages',
+            description: 'Contact parents or admin',
+            color: 'text-amber-600',
+            iconBg: 'bg-amber-50',
+            hoverBg: 'hover:border-amber-200 hover:bg-amber-50/30',
+            onClick: onViewMessages
+        }
+    ];
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-        <CardDescription>Common tasks and shortcuts</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-4">
-          {actions.map((action, index) => {
-            const Icon = action.icon;
-            return (
-              <Button
-                key={index}
-                variant="outline"
-                className="h-auto flex items-center justify-start gap-3 py-4"
-                onClick={action.onClick}
-              >
-                <div className={`rounded-full ${action.iconBg} p-3`}>
-                  <Icon className={`size-5 ${action.color}`} />
-                </div>
-                <div className="text-left">
-                  <p className="text-black">{action.label}</p>
-                  <p className="text-neutral-500">{action.description}</p>
-                </div>
-              </Button>
-            );
-          })}
+    return (
+        <div className="grid gap-3">
+            {actions.map((action, index) => {
+                const Icon = action.icon;
+                return (
+                    <Button
+                        key={index}
+                        variant="outline"
+                        className={`group h-auto w-full justify-between rounded-2xl border-slate-200 bg-white p-4 transition-all duration-200 ${action.hoverBg}`}
+                        onClick={action.onClick}
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={`rounded-xl ${action.iconBg} p-3 transition-transform group-hover:scale-110`}>
+                                <Icon className={`size-5 ${action.color}`} strokeWidth={2.5} />
+                            </div>
+                            <div className="text-left">
+                                <p className="font-bold text-slate-800">{action.label}</p>
+                                <p className="text-xs font-medium text-slate-500">{action.description}</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="size-5 text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-slate-500" />
+                    </Button>
+                );
+            })}
         </div>
-      </CardContent>
-    </Card>
-  );
+    );
 }

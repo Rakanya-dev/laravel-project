@@ -65,8 +65,9 @@ class HandleInertiaRequests extends Middleware
                     'last_name' => $user->last_name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'phone' => $request->user()->phone,
                     'avatar' => $user->profile_photo_url ?? $user->profile_photo_path ?? null,
-
+                    'two_factor_confirmed_at' => $request->user()->two_factor_confirmed_at,
                     'daycare' => function () use ($request) {
                         if ($request->user() && $request->user()->daycare_id) {
                             return Daycare::select('id', 'name')

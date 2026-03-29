@@ -13,7 +13,6 @@ use App\Http\Controllers\Teacher\AssessmentController as TeacherAssessmentContro
 use App\Http\Controllers\Teacher\ReportController as TeacherReportController;
 
 use App\Http\Controllers\Parent\DashboardController as ParentDashboardController;
-use App\Http\Controllers\Parent\ChildController as ParentChildController;
 use App\Http\Controllers\Parent\EnrollmentController as ParentEnrollmentController;
 use App\Http\Controllers\Parent\AssessmentController as ParentAssessmentController;
 use App\Http\Controllers\Parent\ReportController as ParentReportController;
@@ -23,9 +22,14 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-use App\Http\Middleware\CheckParentStatus;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 
-use App\Http\Controllers\General\AssessmentExportController;
+Route::middleware('auth')->group(function () {
+
+    Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+});
 
 Route::get('/', fn() => Redirect::route('login'))->name(name: 'home');
 
@@ -34,7 +38,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // 1. DASHBOARD REDIRECT (Clean and simple!)
     Route::get('/redirect-by-role', function () {
         $user = Auth::user();
-
         return match ($user->role) {
             'admin' => redirect()->route('admin.dashboard'),
             'teacher' => redirect()->route('teacher.dashboard'),
@@ -42,8 +45,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             default => abort(403, 'Unauthorized role.'),
         };
     })->name('role.redirect');
-
-    Route::get('/dashboard', fn() => redirect()->route('role.redirect'))->name('dashboard');
 
     // 1. View the Inbox
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
@@ -55,7 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 
     // ADMIN ROUTES
-    Route::prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['role:admin'])->group(function () {
 
         // Dashboard & Users
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -123,7 +124,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // TEACHER ROUTES
-    Route::prefix('teacher')->name('teacher.')->group(function () {
+    Route::prefix('teacher')->name('teacher.')->middleware(['role:teacher'])->group(function () {
         Route::get('/dashboard', [TeacherDashboardController::class, 'index'])->name('dashboard');
 
         // Students
@@ -171,7 +172,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // PARENT ROUTES
     Route::prefix('parent')
         ->name('parent.')
-        ->middleware([CheckParentStatus::class]) // Protected by Middleware
+        ->middleware(['role:parent'])
         ->group(function () {
 
             Route::post('/enroll', [ParentEnrollmentController::class, 'store'])->name('enroll.store');

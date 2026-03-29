@@ -81,7 +81,7 @@ class AssessmentController extends Controller
         return Inertia::render('teacher/assessments-management', [
             'assessments' => $assessmentsWithNumbers,
             'students' => Student::with('section')
-                ->where('daycare_id', $daycareId) // Use the $daycareId you already defined at the top
+                ->where('daycare_id', $daycareId)
                 ->get(),
             'domains' => $domains,
         ]);
@@ -90,6 +90,20 @@ class AssessmentController extends Controller
     public function show($id)
     {
         $assessment = Assessment::with('student')->findOrFail($id);
+        return $this->redirectToForm($assessment->student, $assessment->id);
+    }
+
+    // 👇 ADDED: The missing edit method to satisfy the router!
+    public function edit($id)
+    {
+        $daycareId = $this->getTeacherDaycareId();
+
+        // Fetch it securely
+        $assessment = Assessment::where('daycare_id', $daycareId)
+            ->with('student')
+            ->findOrFail($id);
+
+        // Hand it off to your existing smart router
         return $this->redirectToForm($assessment->student, $assessment->id);
     }
 

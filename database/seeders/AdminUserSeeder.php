@@ -21,6 +21,7 @@ class AdminUserSeeder extends Seeder
                 // Updated to 8-digit format (standard in MM) or generic mobile
                 'phone' => '09170000000',
                 'status' => 'Active',
+                'email_verified_at' => now(), // 👈 This instantly verifies the account
             ]
         );
     }

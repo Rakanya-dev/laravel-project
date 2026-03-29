@@ -15,14 +15,15 @@ class DaycareSeeder extends Seeder
         $daycareDefinitions = [
             [
                 'name' => 'Sto. Nino Child Development Center',
-                'teacher_name' => 'Maria J. Torres',
+                'teacher_name' => 'Maria Torres',
                 'teacher_email' => 'maria.torres@stnino.com',
                 'established' => '2015',
                 'address' => '123 Main Street, Phase 1',
                 'city' => 'General Mariano Alvarez',
                 'province' => 'Cavite',
                 'postal_code' => '4117',
-                'phone' => '09171234567',
+                // 🚀 Updated to match your phone.ts stripped backend format
+                'phone' => '+639171234567',
                 'email' => 'info@stnino-cdc.edu.ph',
                 'capacity' => 80,
                 'current_enrollment' => 75,
@@ -36,7 +37,7 @@ class DaycareSeeder extends Seeder
                 'city' => 'General Mariano Alvarez',
                 'province' => 'Cavite',
                 'postal_code' => '4117',
-                'phone' => '09182345678',
+                'phone' => '+639182345678',
                 'email' => 'info@stbernadette-cdc.edu.ph',
                 'capacity' => 80,
                 'current_enrollment' => 68,
@@ -50,7 +51,7 @@ class DaycareSeeder extends Seeder
                 'city' => 'General Mariano Alvarez',
                 'province' => 'Cavite',
                 'postal_code' => '4117',
-                'phone' => '09193456789',
+                'phone' => '+639193456789',
                 'email' => 'info@holychild-cdc.edu.ph',
                 'capacity' => 80,
                 'current_enrollment' => 72,
@@ -64,10 +65,10 @@ class DaycareSeeder extends Seeder
                 'city' => 'General Mariano Alvarez',
                 'province' => 'Cavite',
                 'postal_code' => '4117',
-                'phone' => '09204567890',
+                'phone' => '+639204567890',
                 'email' => 'info@stjoseph-cdc.edu.ph',
                 'capacity' => 80,
-                'current_enrollment' => 80, // Full capacity!
+                'current_enrollment' => 80,
             ],
             [
                 'name' => 'St. Anne Child Development Center',
@@ -78,7 +79,7 @@ class DaycareSeeder extends Seeder
                 'city' => 'General Mariano Alvarez',
                 'province' => 'Cavite',
                 'postal_code' => '4117',
-                'phone' => '09215678901',
+                'phone' => '+639215678901',
                 'email' => 'info@stanne-cdc.edu.ph',
                 'capacity' => 80,
                 'current_enrollment' => 65,
@@ -88,6 +89,16 @@ class DaycareSeeder extends Seeder
         $licenseCounter = 1;
 
         foreach ($daycareDefinitions as $data) {
+
+            // 🚀 SMARTER PARSING: Properly extract First, Middle, and Last names
+            $nameParts = explode(' ', $data['teacher_name']);
+            $firstName = array_shift($nameParts); // Takes the first word
+            $lastName = array_pop($nameParts);    // Takes the last word
+            $middleName = implode(' ', $nameParts); // Whatever is left becomes the middle name (e.g., "J.")
+
+            // We reconstruct the exact string the User model will generate for "full_name"
+            $generatedFullName = trim($firstName . ' ' . ($middleName ? $middleName . ' ' : '') . $lastName);
+
             // Create Daycare
             $daycare = Daycare::firstOrCreate(
                 ['name' => $data['name']],
@@ -98,8 +109,9 @@ class DaycareSeeder extends Seeder
                     'postal_code' => $data['postal_code'],
                     'phone' => $data['phone'],
                     'email' => $data['email'],
-                    'principal_name' => $data['teacher_name'],
-                    // 🚀 Region 4A (Cavite) DSWD License Format
+                    'principal_name' => $generatedFullName,
+                    // 🚀 Save the EXACT matching name to the JSON array
+                    'teachers' => [$generatedFullName],
                     'license_number' => 'DSWD-R4A-L-' . str_pad($licenseCounter++, 4, '0', STR_PAD_LEFT),
                     'capacity' => $data['capacity'],
                     'current_enrollment' => $data['current_enrollment'],
@@ -109,20 +121,18 @@ class DaycareSeeder extends Seeder
             );
 
             // Create Teacher
-            $nameParts = explode(' ', $data['teacher_name']);
-            $firstName = $nameParts[0];
-            $lastName = end($nameParts);
-
             User::firstOrCreate(
                 ['email' => $data['teacher_email']],
                 [
                     'daycare_id' => $daycare->id,
                     'first_name' => $firstName,
+                    'middle_name' => $middleName ?: null, // 🚀 Now saves "J." if it exists
                     'last_name' => $lastName,
                     'phone' => $data['phone'],
                     'password' => Hash::make('password123'),
                     'role' => 'teacher',
                     'status' => 'Active',
+                    'email_verified_at' => now(),
                 ]
             );
         }

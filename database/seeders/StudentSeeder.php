@@ -156,6 +156,7 @@ class StudentSeeder extends Seeder
                     'role' => 'parent',
                     'status' => 'Active',
                     'phone' => $parentData['phone'],
+                    'email_verified_at' => now(), // 👈 This instantly verifies the account
                 ]
             );
 

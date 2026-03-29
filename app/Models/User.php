@@ -11,10 +11,11 @@ use Illuminate\Support\Facades\Cache;
 
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
-
-class User extends Authenticatable
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Laravel\Fortify\TwoFactorAuthenticatable;
+class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, SoftDeletes, LogsActivity;
+    use HasFactory, Notifiable, SoftDeletes, LogsActivity, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'first_name',
@@ -32,6 +33,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_recovery_codes', // 👈 Add this
+        'two_factor_secret',
     ];
 
     protected $appends = ['is_online'];
@@ -46,13 +49,15 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_confirmed_at' => 'datetime', // 👈 Add this
+            'last_login_at' => 'datetime',
         ];
     }
 
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['first_name', 'last_name', 'email', 'role', 'status', 'daycare_id'])
+            ->logOnly(['first_name', 'last_name', 'email', 'role', 'status', 'daycare_id', 'two_factor_confirmed_at'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn(string $eventName) => "User account has been {$eventName}");

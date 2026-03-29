@@ -51,6 +51,7 @@ import {
 } from '../ui/alert-dialog';
 
 import { calculateAge, formatPHDate } from '@/utils/date';
+import { formatPhoneNumber } from '@/utils/phone';
 
 interface DaycareDetailsViewProps {
     daycare: Daycare;
@@ -73,19 +74,6 @@ interface Section {
     end_time: string | null;
     capacity: number;
 }
-
-const formatDisplayPhone = (phone?: string) => {
-    if (!phone) return 'N/A';
-    let clean = phone.replace(/\D/g, '');
-
-    if (clean.startsWith('63')) clean = clean.substring(2);
-    else if (clean.startsWith('0')) clean = clean.substring(1);
-
-    if (clean.length >= 10) {
-        return `63+ ${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)}`;
-    }
-    return phone;
-};
 
 export default function DaycareDetailsView({ daycare, onBack, onEdit, onDelete }: DaycareDetailsViewProps) {
     const availableSlots = daycare.capacity - daycare.current;
@@ -298,7 +286,7 @@ export default function DaycareDetailsView({ daycare, onBack, onEdit, onDelete }
                                         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
                                             <Phone className="size-3.5" /> Phone
                                         </p>
-                                        <p className="font-bold text-slate-800">{formatDisplayPhone(daycare.phone)}</p>
+                                        <p className="font-bold text-slate-800">{formatPhoneNumber(daycare.phone)}</p>
                                     </div>
                                     <div className="space-y-1">
                                         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -309,23 +297,44 @@ export default function DaycareDetailsView({ daycare, onBack, onEdit, onDelete }
                                 </div>
                             </CardContent>
                         </Card>
-                        <Card className="rounded-2xl border-indigo-100 bg-indigo-50/30 shadow-sm relative overflow-hidden">
+
+                        {/* 🚀 MULTI-TEACHER DETAILS CARD */}
+                        <Card className="rounded-2xl border-indigo-100 bg-indigo-50/30 shadow-sm relative overflow-hidden flex flex-col h-full">
                             <div className="absolute -right-6 -top-6 size-24 rounded-full bg-indigo-100 blur-2xl"></div>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg font-bold text-indigo-900 z-10">
-                                    <UserCircle className="size-5 text-indigo-500" /> Assigned Teacher
+                                    <Users className="size-5 text-indigo-500" /> Assigned Educators
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="flex flex-col items-center pt-4 text-center z-10 relative">
-                                <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-indigo-100 border-4 border-white shadow-sm ring-1 ring-indigo-50">
-                                    <span className="text-2xl font-black text-indigo-700">
-                                        {daycare.principal_name ? daycare.principal_name.charAt(0).toUpperCase() : '?'}
-                                    </span>
-                                </div>
-                                <h3 className="mb-1 text-xl font-extrabold text-slate-900">{daycare.principal_name || 'Unassigned'}</h3>
-                                <Badge className="mt-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold uppercase tracking-wider text-[10px]">
-                                    Child Development Worker
-                                </Badge>
+                            <CardContent className="pt-2 z-10 relative flex-1">
+                                {(() => {
+                                    const teachersList = (daycare as any).teachers || (daycare.principal_name ? [daycare.principal_name] : []);
+
+                                    if (teachersList.length === 0) {
+                                        return (
+                                            <div className="flex flex-col items-center justify-center text-center h-full py-6">
+                                                <UserCircle className="size-12 text-indigo-200 mb-2" />
+                                                <h3 className="text-sm font-extrabold text-slate-500">No Teachers Assigned</h3>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div className="space-y-3 max-h-[180px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-indigo-200">
+                                            {teachersList.map((teacher: string, idx: number) => (
+                                                <div key={idx} className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-indigo-100 shadow-sm">
+                                                    <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 font-black text-indigo-700">
+                                                        {teacher.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="text-sm font-extrabold text-slate-900 truncate">{teacher}</h3>
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-500">CDW</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
                             </CardContent>
                         </Card>
                     </div>

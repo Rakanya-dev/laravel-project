@@ -1,11 +1,12 @@
 import AppLayout from '@/layouts/app-layout';
 import { Dialog, Transition } from '@headlessui/react';
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, Inbox, PenSquare, Search, SendHorizontal, Smile, Plus, FileText, X, Download, Loader2, UserPlus, CheckCircle2 } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, Inbox, PenSquare, Search, SendHorizontal, Smile, Plus, FileText, X, Download, Loader2 } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import { toast } from 'sonner';
 
 // --- Types ---
 interface User {
@@ -46,7 +47,8 @@ interface Props {
 
 export default function Messages({ conversations, activeMessages, activeRecipient, allowedRecipients }: Props) {
     const { auth } = usePage().props as any;
-    const currentUserId = auth.user.id;
+    const currentUser = auth.user;
+    const currentUserRole = currentUser?.role?.toLowerCase() || '';
 
     // --- STATE ---
     const [messages, setMessages] = useState<Message[]>(activeMessages);
@@ -54,7 +56,7 @@ export default function Messages({ conversations, activeMessages, activeRecipien
     const [isComposeOpen, setIsComposeOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [contactSearch, setContactSearch] = useState(''); // 🚀 NEW: State for contact search in modal
+    const [contactSearch, setContactSearch] = useState('');
 
     // File Attachment State
     const [attachment, setAttachment] = useState<File | null>(null);
@@ -70,12 +72,7 @@ export default function Messages({ conversations, activeMessages, activeRecipien
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-    const { data, setData, post, processing, reset } = useForm({
-        recipient_id: '',
-        body: '',
-    });
-
+    const isTransitioningRef = useRef(false);
     // --- FORMATTERS & HELPERS ---
     const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes';
@@ -98,10 +95,18 @@ export default function Messages({ conversations, activeMessages, activeRecipien
 
     const getInitials = (first: string, last: string) => `${first[0]}${last[0]}`.toUpperCase();
 
-    const imageGallery = messages.filter((msg) => {
-        const isImg = msg.is_image !== undefined ? msg.is_image : isImage(msg.attachment_url);
-        return isImg && msg.attachment_url;
-    });
+    // 🚀 NEW: Helper to format message timestamps (e.g., "10:30 AM")
+    const formatMessageTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const imageGallery = useMemo(() => {
+        return messages.filter((msg) => {
+            const isImg = msg.is_image !== undefined ? msg.is_image : isImage(msg.attachment_url);
+            return isImg && msg.attachment_url;
+        });
+    }, [messages]);
 
     // --- 1. SYNC STATE ON PROP CHANGE ---
     useEffect(() => {
@@ -125,15 +130,20 @@ export default function Messages({ conversations, activeMessages, activeRecipien
     useEffect(() => {
         if (activeRecipient) {
             pollingRef.current = setInterval(() => {
-                router.visit(window.location.href, {
-                    method: 'get',
-                    only: ['activeMessages', 'conversations', 'activeRecipient'],
-                    preserveScroll: true,
+                // 🚀 FIX: If we are actively switching chats, freeze the polling!
+                if (isTransitioningRef.current) return;
+
+                router.get(route('messages.index', { user: activeRecipient.id }), {}, {
+                    only: ['activeMessages', 'conversations'],
                     preserveState: true,
+                    preserveScroll: true,
                     replace: true,
+                    // @ts-ignore
+                    showProgress: false,
                 });
-            }, 2000);
+            }, 15000);
         }
+
         return () => {
             if (pollingRef.current) clearInterval(pollingRef.current);
         };
@@ -169,25 +179,41 @@ export default function Messages({ conversations, activeMessages, activeRecipien
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [lightboxIndex, imageGallery.length]);
 
-    // Reset form when compose modal closes
+    // Reset search when modal closes
     useEffect(() => {
         if (!isComposeOpen) {
-            reset();
             setContactSearch('');
         }
     }, [isComposeOpen]);
 
-    // --- ACTIONS ---
     const handleSelectConversation = (userId: number) => {
+        // 🚀 FIX: Lock the app so background polling can't interfere
+        isTransitioningRef.current = true;
+
         if (pollingRef.current) clearInterval(pollingRef.current);
+        router.cancel();
+
         setShowEmojiPicker(false);
         clearAttachment();
+        setReplyText('');
 
-        router.visit(route('messages.index', { user: userId }), {
+        router.get(route('messages.index', { user: userId }), {}, {
             only: ['activeMessages', 'activeRecipient', 'conversations'],
             preserveState: true,
             preserveScroll: true,
+            onFinish: () => {
+                // 🚀 FIX: Release the lock once the new chat is fully loaded!
+                isTransitioningRef.current = false;
+            },
+            onSuccess: () => {
+                setTimeout(() => textareaRef.current?.focus(), 100);
+            }
         });
+    };
+
+    const handleSelectNewContact = (userId: number) => {
+        setIsComposeOpen(false);
+        handleSelectConversation(userId);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +256,7 @@ export default function Messages({ conversations, activeMessages, activeRecipien
 
         const newMessage: Message = {
             id: tempId,
-            sender_id: currentUserId,
+            sender_id: currentUser.id,
             recipient_id: activeRecipient.id,
             body: replyText,
             attachment_url: tempAttachmentUrl,
@@ -265,20 +291,10 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                     setIsSending(false);
                     setMessages((prev) => prev.filter((m) => m.id !== tempId));
                     if (tempAttachmentUrl) URL.revokeObjectURL(tempAttachmentUrl);
-                    alert('Failed to send message. Please ensure the file is under 10MB.');
+                    toast.error('Failed to send message', { description: 'Please ensure the file is under 10MB.' });
                 },
             },
         );
-    };
-
-    const handleSendNew = (e: React.FormEvent) => {
-        e.preventDefault();
-        post(route('messages.store'), {
-            onSuccess: () => {
-                setIsComposeOpen(false);
-                reset();
-            },
-        });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -292,30 +308,39 @@ export default function Messages({ conversations, activeMessages, activeRecipien
         setReplyText((prev) => prev + emojiData.emoji);
     };
 
-    const filteredConvos = conversations.filter(
-        (c) =>
-            c.user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.user.last_name.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
+    const filteredConvos = useMemo(() => {
+        const lowerSearch = searchTerm.toLowerCase();
+        return conversations.filter(
+            (c) =>
+                c.user.first_name.toLowerCase().includes(lowerSearch) ||
+                c.user.last_name.toLowerCase().includes(lowerSearch),
+        );
+    }, [conversations, searchTerm]);
 
-    // 🚀 NEW: Search filter for the Contact Book modal
-    const filteredContacts = allowedRecipients.filter(
-        (u) =>
-            u.first_name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-            u.last_name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-            u.role.toLowerCase().includes(contactSearch.toLowerCase())
-    );
+    const validRecipients = useMemo(() => {
+        return allowedRecipients.filter((u) => {
+            const role = u.role.toLowerCase();
+            if (currentUserRole === 'admin') return role === 'teacher';
+            if (currentUserRole === 'teacher') return role === 'admin' || role === 'parent';
+            if (currentUserRole === 'parent') return role === 'teacher';
+            return true;
+        });
+    }, [allowedRecipients, currentUserRole]);
 
-    const selectedContactInfo = allowedRecipients.find(u => u.id.toString() === data.recipient_id);
+    const filteredContacts = useMemo(() => {
+        const lowerSearch = contactSearch.toLowerCase();
+        return validRecipients.filter(
+            (u) =>
+                u.first_name.toLowerCase().includes(lowerSearch) ||
+                u.last_name.toLowerCase().includes(lowerSearch) ||
+                u.role.toLowerCase().includes(lowerSearch)
+        );
+    }, [validRecipients, contactSearch]);
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Messages', href: '/messages' }]}>
             <Head title="Messages" />
 
-            {/* 🚀 FIX: Removed max-w-7xl, mx-auto, and outer padding.
-              We calculate the height assuming a standard 64px (4rem) navbar.
-              Adjust the 64px below if your AppLayout header is taller or shorter.
-            */}
             <div className="flex h-[calc(100vh-64px)] w-full flex-col bg-white">
                 <div className="flex h-full w-full overflow-hidden border-t border-slate-200 shadow-sm">
 
@@ -412,9 +437,8 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                     {/* ================= RIGHT: CHAT HISTORY ================= */}
                     <div className={cn(activeRecipient ? 'flex' : 'hidden md:flex', 'flex-1 flex-col bg-white overflow-hidden relative')}>
 
-                        {/* Decorative Background Pattern */}
                         <div className="absolute inset-0 z-0 bg-slate-50/50 [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none">
-                             <svg className="absolute inset-0 h-full w-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
+                            <svg className="absolute inset-0 h-full w-full opacity-[0.03]" xmlns="http://www.w3.org/2000/svg">
                                 <defs>
                                     <pattern id="chat-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
                                         <circle cx="2" cy="2" r="1.5" fill="currentColor" />
@@ -469,7 +493,7 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                                         </div>
                                     ) : (
                                         messages.map((msg) => {
-                                            const isMe = msg.sender_id === currentUserId;
+                                            const isMe = msg.sender_id === currentUser.id;
                                             const isImg = msg.is_image !== undefined ? msg.is_image : isImage(msg.attachment_url);
                                             const fileName = msg.attachment_name || getFileNameFromUrl(msg.attachment_url);
 
@@ -525,6 +549,16 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                                                             {msg.body}
                                                         </div>
                                                     )}
+
+                                                    {/* 🚀 NEW: Timestamp placed elegantly below the message bubble */}
+                                                    <span className={cn(
+                                                        "text-[10px] font-medium text-slate-400 mt-1 mx-1",
+                                                        msg.is_optimistic && "text-indigo-500"
+                                                    )}>
+                                                        {formatMessageTime(msg.created_at)}
+                                                        {msg.is_optimistic && " • Sending..."}
+                                                    </span>
+
                                                 </div>
                                             );
                                         })
@@ -631,7 +665,7 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                     </div>
                 </div>
 
-                {/* --- 🚀 REFINED: MESSENGER-STYLE LIGHTBOX --- */}
+                {/* --- LIGHTBOX --- */}
                 <Transition show={lightboxIndex !== null} as={Fragment}>
                     <Dialog as="div" className="relative z-[100]" onClose={() => setLightboxIndex(null)}>
                         <Transition.Child
@@ -731,20 +765,27 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                     </Dialog>
                 </Transition>
 
-                {/* --- 🚀 NEW: DIRECTORY-STYLE NEW MESSAGE MODAL --- */}
+                {/* --- CONTACT SELECTOR MODAL --- */}
                 <Transition appear show={isComposeOpen} as={Fragment}>
                     <Dialog as="div" className="relative z-50" onClose={() => setIsComposeOpen(false)}>
                         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
                         <div className="fixed inset-0 overflow-y-auto">
                             <div className="flex min-h-full items-center justify-center p-4">
-                                <Dialog.Panel className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col md:flex-row h-[600px] border border-slate-200">
+                                <Dialog.Panel className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl flex flex-col h-[500px] border border-slate-200">
 
-                                    {/* Modal Left: Contact Directory */}
-                                    <div className="w-full md:w-5/12 border-r border-slate-200 flex flex-col bg-slate-50">
-                                        <div className="p-5 border-b border-slate-200 bg-white shadow-sm z-10">
-                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">New Message</h3>
-                                            <p className="text-xs text-slate-500 font-medium mt-1">Select a contact to start chatting</p>
-                                            <div className="mt-4 relative">
+                                    {/* Header & Search */}
+                                    <div className="flex-none bg-white z-10">
+                                        <div className="p-5 border-b border-slate-200 flex justify-between items-start">
+                                            <div>
+                                                <h3 className="text-xl font-black text-slate-900 tracking-tight">New Message</h3>
+                                                <p className="text-xs text-slate-500 font-medium mt-1">Select a contact to start chatting</p>
+                                            </div>
+                                            <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="rounded-full bg-slate-50 text-slate-400 hover:text-slate-900 h-8 w-8 -mt-1 -mr-1">
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="px-5 pt-4 pb-2">
+                                            <div className="relative">
                                                 <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
                                                 <input
                                                     type="text"
@@ -755,93 +796,29 @@ export default function Messages({ conversations, activeMessages, activeRecipien
                                                 />
                                             </div>
                                         </div>
-
-                                        <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-                                            {filteredContacts.length === 0 ? (
-                                                <div className="p-6 text-center text-sm text-slate-400 font-medium">No contacts found matching "{contactSearch}"</div>
-                                            ) : (
-                                                <div className="flex flex-col gap-1.5">
-                                                    {filteredContacts.map(u => {
-                                                        const isSelected = data.recipient_id === u.id.toString();
-                                                        return (
-                                                            <button
-                                                                key={u.id}
-                                                                onClick={() => setData('recipient_id', u.id.toString())}
-                                                                className={cn(
-                                                                    "flex items-center gap-3 w-full p-2.5 rounded-xl text-left transition-all",
-                                                                    isSelected ? "bg-indigo-600 text-white shadow-md" : "hover:bg-slate-200/50 bg-transparent text-slate-800"
-                                                                )}
-                                                            >
-                                                                <div className={cn(
-                                                                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm",
-                                                                    isSelected ? "bg-white/20 text-white" : "bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 border border-white"
-                                                                )}>
-                                                                    {getInitials(u.first_name, u.last_name)}
-                                                                </div>
-                                                                <div className="flex flex-col overflow-hidden">
-                                                                    <span className="truncate text-[15px] font-bold leading-tight">{u.first_name} {u.last_name}</span>
-                                                                    <span className={cn("text-[11px] font-bold uppercase tracking-wider mt-0.5", isSelected ? "text-indigo-200" : "text-slate-400")}>{u.role}</span>
-                                                                </div>
-                                                                {isSelected && <CheckCircle2 className="ml-auto h-5 w-5 text-white mr-2" />}
-                                                            </button>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
                                     </div>
 
-                                    {/* Modal Right: Composer */}
-                                    <div className="w-full md:w-7/12 flex flex-col bg-white relative">
-                                        <div className="absolute top-4 right-4 z-10">
-                                            <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="rounded-full bg-slate-50 text-slate-400 hover:text-slate-900">
-                                                <X className="h-5 w-5" />
-                                            </Button>
-                                        </div>
-
-                                        {data.recipient_id && selectedContactInfo ? (
-                                            <form onSubmit={handleSendNew} className="flex flex-col h-full">
-                                                <div className="p-6 pb-4 border-b border-slate-100">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-xl font-bold border border-indigo-100">
-                                                            {getInitials(selectedContactInfo.first_name, selectedContactInfo.last_name)}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-xl font-bold text-slate-900">{selectedContactInfo.first_name} {selectedContactInfo.last_name}</h4>
-                                                            <p className="text-xs font-bold uppercase tracking-widest text-indigo-500">{selectedContactInfo.role}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex-1 p-6 flex flex-col">
-                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Message Body</label>
-                                                    <textarea
-                                                        className="flex-1 w-full resize-none rounded-2xl border-slate-200 bg-slate-50 p-4 text-[15px] font-medium focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 custom-scrollbar shadow-inner"
-                                                        placeholder={`Write your first message to ${selectedContactInfo.first_name}...`}
-                                                        value={data.body}
-                                                        onChange={(e) => setData('body', e.target.value)}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="p-6 pt-0 flex justify-end">
-                                                    <Button
-                                                        type="submit"
-                                                        disabled={processing || !data.body.trim()}
-                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-md font-bold px-8 h-12 text-[15px]"
-                                                    >
-                                                        {processing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <SendHorizontal className="mr-2 h-5 w-5" />}
-                                                        {processing ? 'Sending...' : 'Send Message'}
-                                                    </Button>
-                                                </div>
-                                            </form>
+                                    {/* Contact List */}
+                                    <div className="flex-1 overflow-y-auto px-3 pb-3 custom-scrollbar">
+                                        {filteredContacts.length === 0 ? (
+                                            <div className="p-6 text-center text-sm text-slate-400 font-medium">No contacts found matching "{contactSearch}"</div>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center">
-                                                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-50 border border-slate-100 shadow-sm">
-                                                    <UserPlus className="h-8 w-8 text-indigo-200" />
-                                                </div>
-                                                <h3 className="text-lg font-bold text-slate-800">Start a Conversation</h3>
-                                                <p className="text-[14px] font-medium mt-1 text-slate-500 max-w-xs">Select a contact from the directory on the left to compose a new message.</p>
+                                            <div className="flex flex-col gap-1.5 mt-2">
+                                                {filteredContacts.map(u => (
+                                                    <button
+                                                        key={u.id}
+                                                        onClick={() => handleSelectNewContact(u.id)}
+                                                        className="flex items-center gap-3 w-full p-2.5 rounded-xl text-left transition-all hover:bg-slate-50 bg-transparent text-slate-800"
+                                                    >
+                                                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-sm bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-700 border border-white">
+                                                            {getInitials(u.first_name, u.last_name)}
+                                                        </div>
+                                                        <div className="flex flex-col overflow-hidden">
+                                                            <span className="truncate text-[15px] font-bold leading-tight">{u.first_name} {u.last_name}</span>
+                                                            <span className="text-[11px] font-bold uppercase tracking-wider mt-0.5 text-slate-400">{u.role}</span>
+                                                        </div>
+                                                    </button>
+                                                ))}
                                             </div>
                                         )}
                                     </div>

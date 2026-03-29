@@ -1,85 +1,88 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import type { Student } from '@/pages/teacher/dashboard';
+import { Users2, ChevronRight } from 'lucide-react';
 
 interface TeacherRecentStudentsProps {
-  students: Student[];
-  onStudentClick?: (student: Student) => void;
-  maxStudents?: number;
+    students: Student[];
+    onStudentClick?: (student: Student) => void;
+    maxStudents?: number;
 }
 
 export function TeacherRecentStudents({
-  students,
-  onStudentClick = () => {},
-  maxStudents = 5
+    students,
+    onStudentClick = () => { },
+    maxStudents = 5
 }: TeacherRecentStudentsProps) {
 
-  const getFullName = (student: Student) => {
-    return `${student.firstName}${student.middleName ? ' ' + student.middleName : ''} ${student.lastName}`.trim();
-  };
+    const getFullName = (student: Student) => {
+        return `${student.firstName}${student.middleName ? ' ' + student.middleName : ''} ${student.lastName}`.trim();
+    };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return <Badge className="bg-green-50 text-[#27815f] border-[#baf7d1]">Completed</Badge>;
-      case 'In Progress':
-        return <Badge className="bg-blue-50 text-[#1d4ed8] border-[#bfdbfe]">In Progress</Badge>;
-      case 'Not Started':
-        return <Badge className="bg-[#fefbe9] text-[#a56105] border-[#ffee8e]">Not Started</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'In Progress':
+            case 'Draft':
+                return <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20">Draft / In Progress</span>;
+            case 'Not Started':
+            default:
+                return <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-inset ring-slate-500/10">Not Started</span>;
+        }
+    };
 
-  const displayStudents = students.slice(0, maxStudents);
+    // 👇 OPTION B: Filter out 'Completed' students so this becomes a true To-Do list
+    const displayStudents = students
+        .filter(s => s.status === 'Draft' || s.status === 'In Progress' || s.status === 'Not Started')
+        .slice(0, maxStudents);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Students</CardTitle>
-        <CardDescription>Your recently assessed students</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {displayStudents.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <p>No students yet</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {displayStudents.map((student) => {
-              const fullName = getFullName(student);
-              const initials = `${student.firstName[0]}${student.lastName[0]}`.toUpperCase();
+    return (
+        <Card className="flex flex-col h-[400px] lg:h-[450px] rounded-2xl border-slate-100 shadow-sm bg-white overflow-hidden">
+            {/* Updated the header to reflect its new purpose */}
+            <div className="shrink-0 border-b border-slate-100 p-5">        <h3 className="font-bold text-slate-800 tracking-tight">Action Needed</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Students with pending or unstarted assessments</p>
+            </div>
 
-              return (
-                <div
-                  key={student.id}
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                  onClick={() => onStudentClick(student)}
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="size-10">
-                      <AvatarFallback className="bg-blue-100 text-blue-600">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-black">{fullName}</p>
-                      <p className="text-sm text-neutral-500">{student.age} years old</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {getStatusBadge(student.status)}
-                    {student.score && (
-                      <p className="text-sm text-neutral-500 mt-1">Score: {student.score}</p>
-                    )}
-                  </div>
+            {displayStudents.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-slate-500">          <div className="rounded-full bg-emerald-50 p-4 mb-3">
+                    <Users2 className="size-8 text-emerald-500" strokeWidth={1.5} />
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+                    <p className="font-bold text-slate-700">All caught up!</p>
+                    <p className="text-xs text-slate-400">No pending assessments at the moment.</p>
+                </div>
+            ) : (
+                <div className="flex-1 overflow-y-auto divide-y divide-slate-100/80">          {displayStudents.map((student) => {
+                    const fullName = getFullName(student);
+                    const initials = `${student.firstName[0]}${student.lastName[0]}`.toUpperCase();
+
+                    return (
+                        <div
+                            key={student.id}
+                            className="group flex items-center justify-between cursor-pointer p-4 transition-colors hover:bg-slate-50/80"
+                            onClick={() => onStudentClick(student)}
+                        >
+                            <div className="flex items-center gap-4">
+                                <Avatar className="size-11 border border-indigo-100 shadow-sm transition-transform group-hover:scale-105">
+                                    <AvatarFallback className="bg-indigo-50 text-indigo-700 font-bold">
+                                        {initials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="space-y-0.5">
+                                    <p className="font-bold text-slate-800 tracking-tight">{fullName}</p>
+                                    <p className="text-xs font-medium text-slate-500">{student.age} years old</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex flex-col items-end gap-1.5">
+                                    {getStatusBadge(student.status)}
+                                </div>
+                                {/* Added an arrow to indicate it's a clickable link to a form */}
+                                <ChevronRight className="size-4 text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-indigo-500" />
+                            </div>
+                        </div>
+                    );
+                })}
+                </div>
+            )}
+        </Card>
+    );
 }

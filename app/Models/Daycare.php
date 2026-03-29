@@ -20,6 +20,7 @@ class Daycare extends Model
         'phone',
         'email',
         'principal_name',
+        'teachers',       // 🚀 Add the new column to fillable
         'license_number',
         'capacity',
         'current_enrollment',
@@ -32,6 +33,7 @@ class Daycare extends Model
         'established_date' => 'date',
         'capacity' => 'integer',
         'current_enrollment' => 'integer',
+        'teachers' => 'array',
     ];
 
     // --- 2. RELATIONSHIPS (Required by Controllers) ---

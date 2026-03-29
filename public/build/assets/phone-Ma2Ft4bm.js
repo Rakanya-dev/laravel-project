@@ -1,0 +1,1 @@
+const r=t=>{if(!t)return"";let e=t.replace(/\D/g,"");return e.startsWith("63")?e=e.substring(2):e.startsWith("0")&&(e=e.substring(1)),e.length===0?"":e.length<=3?`+63 ${e}`:e.length<=6?`+63 ${e.slice(0,3)} ${e.slice(3)}`:e.length<=10?`+63 ${e.slice(0,3)} ${e.slice(3,6)} ${e.slice(6)}`:`+63 ${e.slice(0,3)} ${e.slice(3,6)} ${e.slice(6,10)}`};export{r as f};

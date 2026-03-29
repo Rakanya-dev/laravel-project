@@ -1,4 +1,4 @@
-import { ArrowLeft, Edit2, Info, MapPin, Save, Settings, UserCircle, X, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Edit2, Info, MapPin, Save, Settings, UserCircle, X, Phone, Mail, CheckCircle, Users, Badge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ export default function DaycareEditForm({
     onCancel,
 }: DaycareEditFormProps) {
 
-    const setField = (field: keyof Daycare, value: string | number) => {
+    const setField = (field: string, value: string | number | string[]) => {
         setEditingDaycare((prev) => (prev ? { ...prev, [field]: value } : null));
     };
 
@@ -187,32 +187,76 @@ export default function DaycareEditForm({
 
                 {/* --- SIDEBAR (1/3 width) --- */}
                 <div className="space-y-6">
-                    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm overflow-hidden">
+
+                    <Card className="rounded-2xl border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
-                            <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <UserCircle className="size-5 text-indigo-500" /> Educator
+                            <CardTitle className="text-lg font-bold text-slate-800 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Users className="size-5 text-indigo-500" /> Assigned Educators
+                                </div>
+                                <Badge className="bg-indigo-100 text-indigo-700 font-bold hover:bg-indigo-100 border-none">
+                                    {((editingDaycare as any).teachers || []).length} Selected
+                                </Badge>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-6">
-                            <div className="space-y-2">
-                                <Label className="font-bold text-slate-700">Primary Assigned Teacher</Label>
-                                <Select
-                                    value={editingDaycare.principal_name || undefined}
-                                    onValueChange={(value) => setField('principal_name', value)}
-                                >
-                                    <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-medium text-slate-900">
-                                        <SelectValue placeholder="Select teacher" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {teacherOptions.map((t) => (
-                                            <SelectItem key={t} value={t} className="font-medium">{t}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                        <CardContent className="p-0 flex-1">
+                            <div className="max-h-[250px] overflow-y-auto p-4 space-y-2 scrollbar-thin">
+                                {(() => {
+                                    // 1. Get the current list of selected teachers
+                                    const currentTeachers = (editingDaycare as any).teachers || (editingDaycare.principal_name ? [editingDaycare.principal_name] : []);
+
+                                    // 2. Combine available teachers with currently assigned ones to ensure they always show up
+                                    const allOptions = Array.from(new Set([...availableTeachers, ...currentTeachers]));
+
+                                    // 3. 🚀 THE MAGIC: Sort selected teachers to the top, then alphabetically
+                                    const sortedTeachers = allOptions.sort((a, b) => {
+                                        const aSelected = currentTeachers.includes(a);
+                                        const bSelected = currentTeachers.includes(b);
+
+                                        if (aSelected && !bSelected) return -1; // Put A first
+                                        if (!aSelected && bSelected) return 1;  // Put B first
+                                        return a.localeCompare(b);              // If same status, sort A-Z
+                                    });
+
+                                    if (sortedTeachers.length === 0) {
+                                        return <p className="text-sm text-slate-500 text-center py-4">No teachers available.</p>;
+                                    }
+
+                                    return sortedTeachers.map((teacherName) => {
+                                        const isSelected = currentTeachers.includes(teacherName);
+
+                                        return (
+                                            <button
+                                                key={teacherName}
+                                                type="button"
+                                                onClick={() => {
+                                                    let updatedTeachers = [...currentTeachers];
+                                                    if (isSelected) {
+                                                        updatedTeachers = updatedTeachers.filter(t => t !== teacherName);
+                                                    } else {
+                                                        updatedTeachers.push(teacherName);
+                                                    }
+                                                    setField('teachers' as any, updatedTeachers);
+                                                }}
+                                                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected
+                                                        ? 'bg-indigo-50 border-indigo-200 shadow-sm'
+                                                        : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                <span className={`text-sm font-bold truncate pr-3 ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>
+                                                    {teacherName}
+                                                </span>
+                                                <div className={`size-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'
+                                                    }`}>
+                                                    {isSelected && <CheckCircle className="size-3.5 text-white" />}
+                                                </div>
+                                            </button>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </CardContent>
                     </Card>
-
                     <Card className="rounded-2xl border-slate-200 bg-white shadow-sm overflow-hidden">
                         <CardHeader className="bg-slate-50/50 border-b border-slate-100 pb-4">
                             <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">

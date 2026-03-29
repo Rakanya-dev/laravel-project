@@ -31,19 +31,27 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
         $request->session()->regenerate();
-        $request->user()->update(['last_login_at' => now()]);
-        $user = $request->user();
 
-        switch ($user->role) {
-            case 'admin':
-                return redirect()->route('admin.dashboard');
-            case 'teacher':
-                return redirect()->route('teacher.dashboard');
-            case 'parent':
-                return redirect()->route('parent.dashboard');
-            default:
-                abort(403, 'Unauthorized account type');
-        }
+        // Update last login before the redirect check
+        $request->user()->update(['last_login_at' => now()]);
+
+        // 👇 This Action handles the "Gatekeeper" check
+        return app(\Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable::class)->handle($request, function ($request) {
+            $user = $request->user();
+
+            // This code only runs if the user DOES NOT have 2FA enabled
+            // OR after they have successfully passed the 2FA challenge.
+            switch ($user->role) {
+                case 'admin':
+                    return redirect()->route('admin.dashboard');
+                case 'teacher':
+                    return redirect()->route('teacher.dashboard');
+                case 'parent':
+                    return redirect()->route('parent.dashboard');
+                default:
+                    abort(403, 'Unauthorized account type');
+            }
+        });
     }
 
     /**

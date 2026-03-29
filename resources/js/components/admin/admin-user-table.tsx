@@ -91,7 +91,7 @@ export default function AdminUsersTable({
 
         if (clean.length >= 10) {
             // 🚀 Changed to 63+
-            return `63+ ${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)}`;
+            return `+63 ${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)}`;
         }
         return phone;
     };

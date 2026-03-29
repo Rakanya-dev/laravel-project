@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { formatPhoneNumber } from '@/utils/phone';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -24,6 +25,7 @@ interface ProfileForm {
     middle_name?: string;
     last_name: string;
     email: string;
+    phone?: string;
 }
 
 export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: boolean; status?: string }) {
@@ -34,6 +36,7 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
         middle_name: auth.user.middle_name || '',
         last_name: auth.user.last_name || '',
         email: auth.user.email,
+        phone: formatPhoneNumber(auth.user.phone),
     });
 
     const submit: FormEventHandler = (e) => {
@@ -132,7 +135,20 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
                                 )}
                             </div>
                         )}
-
+                        <div className="grid gap-2">
+                            <Label htmlFor="phone">Phone Number</Label>
+                            <Input
+                                id="phone"
+                                type="tel"
+                                className="mt-1 block w-full"
+                                value={data.phone}
+                                onChange={(e) => setData('phone', formatPhoneNumber(e.target.value))}
+                                autoComplete="tel"
+                                placeholder="+63 9XX XXX XXXX"
+                                maxLength={16}
+                            />
+                            <InputError className="mt-2" message={errors.phone} />
+                        </div>
                         <div className="flex items-center gap-4">
                             <Button disabled={processing}>Save</Button>
 

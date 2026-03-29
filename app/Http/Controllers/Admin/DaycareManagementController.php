@@ -59,6 +59,9 @@ class DaycareManagementController extends Controller
             // 🚀 REMOVED: current_enrollment
             'description' => 'nullable|string',
             'established_date' => 'nullable|date',
+            'teachers' => 'nullable|array',
+            'teachers.*' => 'string|max:255',
+
         ]);
 
         Daycare::create($validated);
@@ -81,6 +84,8 @@ class DaycareManagementController extends Controller
             // 🚀 REMOVED: current_enrollment
             'description' => 'nullable|string',
             'established_date' => 'nullable|date',
+            'teachers' => 'nullable|array',
+            'teachers.*' => 'string|max:255',
         ]);
 
         $daycare->update($validated);
@@ -93,4 +98,5 @@ class DaycareManagementController extends Controller
         $daycare->delete();
         return Redirect::route('admin.daycare.index')->with('success', 'Daycare deleted successfully.');
     }
+
 }
