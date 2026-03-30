@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { formatPhoneNumber } from '@/utils/phone';
+import ProfilePhotoUpload from '@/components/profile-photo-upload';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -54,6 +55,11 @@ export default function Profile({ mustVerifyEmail, status }: { mustVerifyEmail: 
             <SettingsLayout>
                 <div className="space-y-6">
                     <HeadingSmall title="Profile information" description="Update your name and email address" />
+
+                    <ProfilePhotoUpload
+                        user={auth.user}
+                        key={auth.user.profile_photo}
+                        />
 
                     <form onSubmit={submit} className="space-y-6">
                         <div className="grid gap-2">

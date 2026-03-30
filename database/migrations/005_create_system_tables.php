@@ -8,17 +8,6 @@ return new class extends Migration {
     public function up(): void
     {
         // Reports
-        Schema::create('report_templates', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('description')->nullable();
-            $table->longText('content');
-            $table->string('type');
-            $table->boolean('is_active')->default(true);
-            $table->softDeletes();
-            $table->timestamps();
-        });
-
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('student_id')->nullable()->constrained('students')->nullOnDelete();

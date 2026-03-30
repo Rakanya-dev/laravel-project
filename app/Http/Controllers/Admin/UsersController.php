@@ -21,25 +21,22 @@ class UsersController extends Controller
         $status = $request->query('status', 'all');
         $daycare = $request->query('daycare', 'all');
 
+        // 🚀 OPTIMIZATION: Used Laravel's when() for cleaner conditional querying
         $applyFilters = function ($query) use ($search, $status, $daycare) {
-            if (!empty($search)) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
+            $query->when($search, function ($q, $search) {
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
                 });
-            }
-
-            if ($status !== 'all') {
-                $query->where('status', $status);
-            }
-
-            if ($daycare !== 'all') {
-                $query->where(function ($q) use ($daycare) {
-                    $q->whereHas('daycare', fn($d) => $d->where('name', $daycare))
-                        ->orWhereHas('students.daycare', fn($d) => $d->where('name', $daycare));
+            })
+                ->when($status !== 'all', fn($q) => $q->where('status', $status))
+                ->when($daycare !== 'all', function ($q) use ($daycare) {
+                    $q->where(function ($sub) use ($daycare) {
+                        $sub->whereHas('daycare', fn($d) => $d->where('name', $daycare))
+                            ->orWhereHas('students.daycare', fn($d) => $d->where('name', $daycare));
+                    });
                 });
-            }
         };
 
         // 1. Fetch Teachers
@@ -73,7 +70,7 @@ class UsersController extends Controller
             'first_name' => 'required|string',
             'middle_name' => 'nullable|string',
             'last_name' => 'required|string',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['required', 'email', Rule::unique('users')->whereNull('deleted_at')],
             'phone' => 'required',
             'password' => 'required|confirmed|min:8',
             'daycare_id' => 'required|exists:daycares,id',
@@ -98,7 +95,7 @@ class UsersController extends Controller
                 // Keep old column for backward compatibility
                 $daycare->principal_name = $newUser->full_name;
 
-                // 🚀 Sync with the new JSON array column
+                // Sync with the new JSON array column
                 $currentTeachers = is_array($daycare->teachers) ? $daycare->teachers : [];
                 if (!in_array($newUser->full_name, $currentTeachers)) {
                     $currentTeachers[] = $newUser->full_name;
@@ -126,11 +123,10 @@ class UsersController extends Controller
             'email' => [
                 'required',
                 'email',
-                Rule::unique('users')->ignore($user->id),
+                Rule::unique('users')->ignore($user->id)->whereNull('deleted_at'),
             ],
             'phone' => 'required',
             'daycare_id' => 'required|exists:daycares,id',
-            'status' => 'required|in:Active,Pending,Inactive',
         ]);
 
         $user->update($validated);
@@ -142,27 +138,38 @@ class UsersController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($user->daycareCenter) {
-            $daycare = $user->daycareCenter;
+        // 1. TEACHER CLEANUP: Remove them from the Daycare JSON arrays
+        // 🚀 FIXED: Changed 'daycareCenter' to 'daycare' to match your relationship
+        if ($user->role === 'teacher' && $user->daycare) {
+            $daycare = $user->daycare;
 
-            // Clean up old column
             if ($daycare->principal_name === $user->full_name) {
                 $daycare->principal_name = null;
             }
 
-            // 🚀 Clean up new JSON array column
             $currentTeachers = is_array($daycare->teachers) ? $daycare->teachers : [];
-            if (($key = array_search($user->full_name, $currentTeachers)) !== false) {
-                unset($currentTeachers[$key]);
-                $daycare->teachers = array_values($currentTeachers); // re-index array
-            }
-
+            $daycare->teachers = array_values(array_diff($currentTeachers, [$user->full_name]));
             $daycare->save();
         }
 
+        // 2. PARENT CLEANUP: Handle the orphaned students problem
+        if ($user->role === 'parent') {
+            // Option A: Stop the deletion and warn the admin (Safest)
+            if ($user->students()->count() > 0) {
+                return Redirect::back()->withErrors([
+                    'error' => 'Cannot delete this parent because they have enrolled students. Please remove the students first.'
+                ]);
+            }
+
+            // Option B: (Alternative) Automatically delete the parent's students too
+            // If you prefer this, comment out Option A and uncomment the line below:
+            // $user->students()->delete();
+        }
+
+        // 3. Finally, delete the user
         $user->delete();
 
-        return Redirect::back()->with('success', 'User deleted successfully.');
+        return Redirect::back()->with('success', ucfirst($user->role) . ' deleted successfully.');
     }
 
     public function export(Request $request)
@@ -170,44 +177,34 @@ class UsersController extends Controller
         $request->validate([
             'type' => ['required', Rule::in(['teachers', 'parents'])],
         ]);
+
         $userType = $request->query('type') === 'teachers' ? 'teacher' : 'parent';
         $filename = $request->query('type') . '-' . now()->format('Y-m-d') . '.csv';
+
         return Excel::download(new UsersExport($userType), $filename);
     }
 
-    // 🚀 NEW: Strict Assignment Logic Added Here!
     public function getTeacherList(Request $request): JsonResponse
     {
-        // Check if the frontend passed a specific daycare ID that we are currently editing
         $currentDaycareId = $request->query('daycare_id');
 
-        // 1. Find all daycares EXCEPT the one we are editing
-        $query = Daycare::query();
-        if ($currentDaycareId) {
-            $query->where('id', '!=', $currentDaycareId);
-        }
-
-        // 2. Get all teachers currently assigned to those other daycares
-        $assignedTeachers = $query->pluck('teachers')
+        // 1. Get all teachers currently assigned to other daycares
+        // 🚀 OPTIMIZATION: Used when() to avoid an if-statement wrapper
+        $assignedTeachers = Daycare::when($currentDaycareId, fn($q) => $q->where('id', '!=', $currentDaycareId))
+            ->pluck('teachers')
             ->flatten()
             ->filter()
             ->unique()
             ->toArray();
 
-        // 3. Fetch all active users with the 'teacher' role
-        $activeTeachers = User::where('role', 'teacher')
+        // 2. Fetch all active users with the 'teacher' role, and immediately
+        // 🚀 OPTIMIZATION: Used Collections pluck()->diff() to extract available names instantly
+        $availableTeacherNames = User::where('role', 'teacher')
             ->where('status', 'active')
-            ->get(['id', 'first_name', 'middle_name', 'last_name']);
-
-        // 4. Map to full_name and EXCLUDE the ones already assigned elsewhere
-        $availableTeacherNames = $activeTeachers
-            ->map(function ($user) {
-                return $user->full_name;
-            })
-            ->reject(function ($fullName) use ($assignedTeachers) {
-                return in_array($fullName, $assignedTeachers);
-            })
-            ->values() // Reset array keys after rejecting
+            ->get(['id', 'first_name', 'middle_name', 'last_name'])
+            ->pluck('full_name') // Plucks the accessor!
+            ->diff($assignedTeachers) // Removes the ones already assigned
+            ->values() // Re-indexes the array cleanly
             ->toArray();
 
         return response()->json([

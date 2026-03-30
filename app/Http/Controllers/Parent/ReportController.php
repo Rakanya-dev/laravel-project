@@ -25,11 +25,14 @@ class ReportController extends Controller
             ->findOrFail($studentId);
 
         // 2. AGE CALCULATION: Fix the "NA years old" bug for the PDF
+        // 🚀 OPTIMIZATION 1: Calculate the exact difference ONCE instead of 3 separate times.
         $dob = Carbon::parse($student->date_of_birth);
-        $student->age = $dob->age;
-        $student->age_years = $dob->age;
-        $student->age_months = $dob->diffInMonths(now()) % 12;
-        $student->formatted_age = $dob->diff(now())->format('%y Years, %m Months');
+        $diff = $dob->diff(now());
+
+        $student->age = $diff->y;
+        $student->age_years = $diff->y;
+        $student->age_months = $diff->m;
+        $student->formatted_age = $diff->format('%y Years, %m Months');
 
         return $student;
     }
@@ -39,9 +42,10 @@ class ReportController extends Controller
      */
     private function getConsolidatedAssessments($studentId)
     {
-        // 🚀 THE FIX: Fetch ALL completed assessments in chronological order
-        // so the PDF can show Eval 1, Eval 2, and Eval 3 side-by-side!
-        return Assessment::with('scores.domain')
+        // 🚀 OPTIMIZATION 2: Added 'teacher' to the eager load.
+        // The PDF Blade view needs the teacher's name. Adding it here prevents
+        // a hidden N+1 database query from firing while the PDF is rendering!
+        return Assessment::with(['scores.domain', 'teacher'])
             ->where('student_id', $studentId)
             ->where('status', 'Completed')
             ->orderBy('assessment_date', 'asc') // Chronological (Oldest to Newest)

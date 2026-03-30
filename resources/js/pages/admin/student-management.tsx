@@ -283,22 +283,6 @@ export default function StudentManagement() {
     const [restoreStatus, setRestoreStatus] = useState('');
 
     // --- 6. OPTIMISTIC HANDLERS ---
-    const handleDelete = async (studentId: number) => {
-        if (!confirm('Are you sure you want to temporarily delete (archive) this child record?')) return;
-        setAllStudents((prev) =>
-            prev.map((s) =>
-                s.id === studentId ? { ...s, archived: true, archivedDate: formatPHDate(new Date().toISOString()), status: 'Inactive' } : s,
-            ),
-        );
-        toast.success('Child record moved to archive.');
-        router.delete(route('admin.students.destroy', studentId), {
-            preserveScroll: true,
-            onError: () => {
-                toast.error('Failed to delete.');
-                router.reload();
-            },
-        });
-    };
 
     const handleArchive = async () => {
         if (!archivingStudent) return;
@@ -402,25 +386,32 @@ export default function StudentManagement() {
     };
 
     const handlePermanentDelete = async (student: Student) => {
-        if (!confirm('Are you sure you want to PERMANENTLY delete this record?')) return;
+        // ❌ REMOVED: if (!confirm(...)) return;
+
+        // 1. Optimistically update the UI so it feels instant
         setAllStudents((prev) => prev.filter((s) => s.id !== student.id));
         toast.success('Child record permanently deleted');
+
+        // 2. Send the request to the database
         router.delete(route('admin.students.permanent-delete', student.id), {
             preserveScroll: true,
             onError: () => {
                 toast.error('Failed to delete.');
-                router.reload();
+                router.reload(); // Reverts the UI if the database fails
             },
         });
     };
 
     const handleBulkPermanentDelete = async (idsToDelete: number[]) => {
         if (idsToDelete.length === 0) return;
-        if (!confirm(`Permanently delete ${idsToDelete.length} record(s)?`)) return;
 
+        // ❌ REMOVED: if (!confirm(...)) return;
+
+        // 1. Optimistically update the UI
         setAllStudents((prev) => prev.filter((s) => !idsToDelete.includes(s.id)));
         toast.success(`${idsToDelete.length} record(s) permanently deleted`);
 
+        // 2. Send the request to the database
         router.post(
             route('admin.students.bulk-permanent-delete'),
             { ids: idsToDelete },
@@ -428,7 +419,7 @@ export default function StudentManagement() {
                 preserveScroll: true,
                 onError: () => {
                     toast.error('Bulk delete failed.');
-                    router.reload();
+                    router.reload(); // Reverts the UI if the database fails
                 },
             },
         );

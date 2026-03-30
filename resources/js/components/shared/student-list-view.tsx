@@ -374,13 +374,13 @@ export function StudentListView<T extends BaseStudent>({
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuLabel>Analytics</DropdownMenuLabel>
+                                    <DropdownMenuLabel>Reports</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={onConsolidatedReport}>
-                                        <FileSpreadsheet className="mr-2 size-4 text-green-600" /> Record
+                                        <FileSpreadsheet className="mr-2 size-4 text-green-600" /> Class Consolidated Record
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={onAnalysisReport}>
-                                        <BarChart3 className="mr-2 size-4 text-blue-600" /> Analysis
+                                        <BarChart3 className="mr-2 size-4 text-blue-600" /> Class Developmental Summary
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

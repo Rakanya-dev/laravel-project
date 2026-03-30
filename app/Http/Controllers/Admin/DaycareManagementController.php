@@ -9,34 +9,32 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
-use Illuminate\Support\Carbon;
 
 class DaycareManagementController extends Controller
 {
     public function index()
     {
+        // 🚀 OPTIMIZATION: Used PHP arrow functions for cleaner, faster execution in memory
         $daycares = Daycare::with([
-            // 🚀 FIX: Filter the students first, THEN load their section!
-            'students' => function ($query) {
-                $query->where('status', 'Active')->with('section');
-            },
+            'students' => fn ($query) => $query->where('status', 'Active')->with('section'),
             'sections'
-
         ])
-            ->withCount([
-                'students as current_enrollment' => function ($query) {
-                    $query->where('status', 'Active');
-                }
-            ])
-            ->get();
+        ->withCount([
+            'students as current_enrollment' => fn ($query) => $query->where('status', 'Active')
+        ])
+        ->get();
 
-        $teachers = User::where('role', 'teacher')
+        // 🚀 OPTIMIZATION: Added a filter to prevent "Double Spaces" if a teacher has no middle name.
+        // Also used `values()` to ensure it stays a clean JavaScript array.
+        $availableTeachers = User::where('role', 'teacher')
             ->where('status', 'active')
-            ->get(['first_name', 'middle_name', 'last_name']);
-
-        $availableTeachers = $teachers->map(function ($user) {
-            return trim("{$user->first_name} {$user->middle_name} {$user->last_name}");
-        })->toArray();
+            ->get(['first_name', 'middle_name', 'last_name'])
+            ->map(fn($user) => collect([$user->first_name, $user->middle_name, $user->last_name])
+                ->filter()
+                ->implode(' ')
+            )
+            ->values()
+            ->toArray();
 
         return Inertia::render('admin/daycare-management', [
             'daycares' => $daycares,
@@ -56,12 +54,10 @@ class DaycareManagementController extends Controller
             'phone' => 'required|string|max:20',
             'principal_name' => 'nullable|string|max:255',
             'capacity' => 'required|integer|min:1',
-            // 🚀 REMOVED: current_enrollment
             'description' => 'nullable|string',
             'established_date' => 'nullable|date',
             'teachers' => 'nullable|array',
             'teachers.*' => 'string|max:255',
-
         ]);
 
         Daycare::create($validated);
@@ -81,7 +77,6 @@ class DaycareManagementController extends Controller
             'phone' => 'required|string|max:20',
             'principal_name' => 'nullable|string|max:255',
             'capacity' => 'required|integer|min:1',
-            // 🚀 REMOVED: current_enrollment
             'description' => 'nullable|string',
             'established_date' => 'nullable|date',
             'teachers' => 'nullable|array',
@@ -96,7 +91,7 @@ class DaycareManagementController extends Controller
     public function destroy(Daycare $daycare)
     {
         $daycare->delete();
+
         return Redirect::route('admin.daycare.index')->with('success', 'Daycare deleted successfully.');
     }
-
 }

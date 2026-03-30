@@ -15,16 +15,28 @@ class DashboardController extends Controller
 {
     /**
      * 1. THE MAIN ENTRY POINT
-     * Look how clean this is now!
      */
     public function index()
     {
         $parent = Auth::user();
 
+        // 🚀 OPTIMIZATION 1: Fetch students ONCE and sort their relationships at the DB level!
+        // This prevents double-querying and saves PHP RAM.
+        $students = $parent->students()
+            ->with([
+                'daycare',
+                'assessments' => fn($q) => $q->orderBy('assessment_date', 'desc'),
+                'assessments.scores.domain',
+                'assessments.teacher',
+                'reports' => fn($q) => $q->orderBy('report_date', 'desc')
+            ])
+            ->get();
+
         return Inertia::render('parent/dashboard', [
             'user' => $parent,
-            'conversations' => $this->getConversations($parent),
-            'students' => $this->getStudentsData($parent),
+            // Pass the pre-loaded students collection to the helpers
+            'conversations' => $this->getConversations($parent, $students),
+            'students' => $this->getStudentsData($students),
             'daycares' => Daycare::select('id', 'name')->get(),
             'pendingEnrollment' => EnrollmentRequest::where('user_id', $parent->id)->where('status', 'Pending')->first(),
         ]);
@@ -33,7 +45,7 @@ class DashboardController extends Controller
     /**
      * 2. EXTRACTED: CONVERSATION LOGIC
      */
-    private function getConversations($parent)
+    private function getConversations($parent, $students)
     {
         // Get active chats
         $existingConversations = Message::where('sender_id', $parent->id)
@@ -64,7 +76,9 @@ class DashboardController extends Controller
 
         // Get teachers the parent hasn't talked to yet
         $existingContactIds = $existingConversations->pluck('contact_id')->toArray();
-        $daycareIds = $parent->students()->pluck('daycare_id')->unique();
+
+        // 🚀 OPTIMIZATION 2: Re-use the in-memory students collection instead of hitting the DB again!
+        $daycareIds = $students->pluck('daycare_id')->unique()->filter()->toArray();
 
         $availableTeachers = User::where('role', 'teacher')
             ->whereIn('daycare_id', $daycareIds)
@@ -87,59 +101,57 @@ class DashboardController extends Controller
     /**
      * 3. EXTRACTED: STUDENT DATA LOGIC
      */
-    private function getStudentsData($parent)
+    private function getStudentsData($students)
     {
-        return $parent->students()
-            ->with(['daycare', 'assessments.scores.domain', 'assessments.teacher', 'reports'])
-            ->get()
-            ->map(function ($child) {
-                $sortedAssessments = $child->assessments->sortByDesc('assessment_date');
-                $lastAssessment = $sortedAssessments->first();
-                $latestReport = $child->reports->sortByDesc('report_date')->first();
+        return $students->map(function ($child) {
+            // 🚀 OPTIMIZATION 3: No need to sortByDesc() here anymore! The DB already did it perfectly.
+            $sortedAssessments = $child->assessments;
+            $lastAssessment = $sortedAssessments->first();
+            $latestReport = $child->reports->first();
 
-                return [
-                    'id' => $child->id,
-                    'name' => $child->first_name . ' ' . $child->last_name,
-                    'daycare' => $child->daycare->name ?? 'Unknown Daycare',
-                    'age' => ($child->age_years ?? 0) . ' yrs',
-                    'overview' => [
-                        'next_due' => $lastAssessment && $lastAssessment->next_assessment_date ? Carbon::parse($lastAssessment->next_assessment_date)->format('M d, Y') : 'TBD',
-                        'latest_report_id' => $latestReport ? $latestReport->id : null,
-                        'progress_summary' => $this->calculateProgressSummary($lastAssessment)
-                    ],
-                    'assessments' => $sortedAssessments->map(function ($a) {
-                        return [
-                            'id' => $a->id,
-                            'evaluation' => $a->assessment_type ?? 'Assessment',
-                            'evaluator' => $a->teacher ? ($a->teacher->first_name . ' ' . $a->teacher->last_name) : 'Daycare Teacher',
-                            'dateCreated' => $a->assessment_date ?? $a->created_at,
-                            'standardScore' => (int) $a->standard_score,
-                            'sumOfScaled' => (int) $a->sum_of_scaled,
-                            'assessmentSummary' => $a->remarks ?? '',
-                            'recommendation' => $a->recommendation ?? '',
-                            'nextAssessmentDue' => $a->next_assessment_date ? Carbon::parse($a->next_assessment_date)->format('M d, Y') : 'TBD',
-                            'assessment_type' => $a->assessment_type,
-                            'assessment_date' => $a->assessment_date ?? $a->created_at,
-                            'overall_score' => $a->overall_score ?? $a->standard_score,
-                            'status' => $a->status,
-                            'scores' => $a->scores,
-                        ];
-                    })->values(),
-                    'reports' => $sortedAssessments->where('status', 'Completed')->count() > 0
-                        ? collect([
-                            [
-                                'id' => $child->id,
-                                'title' => 'Official ECCD Report Card',
-                                'type' => 'Consolidated Record',
-                                'evaluator' => 'Daycare Administration',
-                                'date' => now()->toDateString(),
-                                'summary' => 'This is the official compilation of developmental milestones achieved by ' . $child->first_name . '.',
-                                'badge' => 'bg-indigo-100 text-indigo-800'
-                            ]
-                        ])
-                        : collect([]),
-                ];
-            });
+            return [
+                'id' => $child->id,
+                'name' => $child->first_name . ' ' . $child->last_name,
+                'daycare' => $child->daycare->name ?? 'Unknown Daycare',
+                'age' => ($child->age_years ?? 0) . ' yrs',
+                'overview' => [
+                    'next_due' => $lastAssessment && $lastAssessment->next_assessment_date ? Carbon::parse($lastAssessment->next_assessment_date)->format('M d, Y') : 'TBD',
+                    'latest_report_id' => $latestReport ? $latestReport->id : null,
+                    'progress_summary' => $this->calculateProgressSummary($lastAssessment)
+                ],
+                'assessments' => $sortedAssessments->map(function ($a) {
+                    return [
+                        'id' => $a->id,
+                        'evaluation' => $a->assessment_type ?? 'Assessment',
+                        'evaluator' => $a->teacher ? ($a->teacher->first_name . ' ' . $a->teacher->last_name) : 'Daycare Teacher',
+                        'dateCreated' => $a->assessment_date ?? $a->created_at,
+                        'standardScore' => (int) $a->standard_score,
+                        'sumOfScaled' => (int) $a->sum_of_scaled,
+                        'assessmentSummary' => $a->remarks ?? '',
+                        'recommendation' => $a->recommendation ?? '',
+                        'nextAssessmentDue' => $a->next_assessment_date ? Carbon::parse($a->next_assessment_date)->format('M d, Y') : 'TBD',
+                        'assessment_type' => $a->assessment_type,
+                        'assessment_date' => $a->assessment_date ?? $a->created_at,
+                        'overall_score' => $a->overall_score ?? $a->standard_score,
+                        'status' => $a->status,
+                        'scores' => $a->scores,
+                    ];
+                })->values(),
+                'reports' => $sortedAssessments->where('status', 'Completed')->count() > 0
+                    ? collect([
+                        [
+                            'id' => $child->id,
+                            'title' => 'Official ECCD Report Card',
+                            'type' => 'Consolidated Record',
+                            'evaluator' => 'Daycare Administration',
+                            'date' => now()->toDateString(),
+                            'summary' => 'This is the official compilation of developmental milestones achieved by ' . $child->first_name . '.',
+                            'badge' => 'bg-indigo-100 text-indigo-800'
+                        ]
+                    ])
+                    : collect([]),
+            ];
+        });
     }
 
     /**

@@ -29,6 +29,7 @@ class StudentController extends Controller
      */
     public function index()
     {
+        // PERFECT: Eager loading daycare, parents, and section directly stops N+1 lag on load!
         $students = Student::withTrashed()->with('daycare:id,name', 'parents', 'section:id,name')->get();
         $daycares = Daycare::all(['id', 'name']);
 
@@ -55,7 +56,7 @@ class StudentController extends Controller
             'students' => $students,
             'daycares' => $daycares,
             'parents' => $parents,
-            'sections' => $sections, // 👈 PASS SECTIONS TO REACT
+            'sections' => $sections,
             'pendingEnrollments' => $pendingEnrollments,
         ]);
     }
@@ -68,15 +69,12 @@ class StudentController extends Controller
         $enrollment = EnrollmentRequest::findOrFail($id);
 
         // 🚀 FIX 1: THE DOUBLE-CLICK GUARD
-        // If the admin double-clicks the button, this stops the second click immediately!
         if ($enrollment->status === 'Approved') {
             return redirect()->back()->with('error', 'This application has already been processed.');
         }
 
         if ($enrollment->student_id) {
-            // ---------------------------------------------------------
             // SCENARIO 1: LINKING AN EXISTING CHILD (Via Secret PIN)
-            // ---------------------------------------------------------
             $student = Student::findOrFail($enrollment->student_id);
 
             $student->parents()->syncWithoutDetaching([
@@ -89,21 +87,17 @@ class StudentController extends Controller
             $broadcastType = 'update';
 
         } else {
-            // ---------------------------------------------------------
             // SCENARIO 2: BRAND NEW ENROLLMENT (Website Application)
-            // ---------------------------------------------------------
             $request->validate([
                 'section_id' => 'required|exists:sections,id',
             ]);
 
             // 🚀 FIX 2: THE "ALREADY EXISTS" GUARD
-            // Search the database to see if a child with this exact name and DOB already exists
             $student = Student::where('first_name', $enrollment->first_name)
                 ->where('last_name', $enrollment->last_name)
                 ->where('date_of_birth', $enrollment->date_of_birth)
                 ->first();
 
-            // Only create a brand new student if they truly DO NOT exist yet!
             if (!$student) {
                 $student = Student::create([
                     'daycare_id' => $enrollment->daycare_id,
@@ -118,7 +112,6 @@ class StudentController extends Controller
                 ]);
                 $broadcastType = 'create';
             } else {
-                // If they did already exist, just update their section and remove their PIN!
                 $student->update([
                     'section_id' => $request->section_id,
                     'access_code' => null
@@ -126,17 +119,12 @@ class StudentController extends Controller
                 $broadcastType = 'update';
             }
 
-            // Link the Parent to the Student safely
             $student->parents()->syncWithoutDetaching([
                 $enrollment->user_id => ['relationship' => 'Parent', 'is_primary' => true]
             ]);
 
             $message = 'Student approved, assigned to section, and documents securely destroyed.';
         }
-
-        // ---------------------------------------------------------
-        // SHARED CLEANUP (Executes for both scenarios)
-        // ---------------------------------------------------------
 
         // SECURE DATA DELETION
         if ($enrollment->birth_cert_path) {
@@ -146,14 +134,11 @@ class StudentController extends Controller
             Storage::delete($enrollment->parent_id_path);
         }
 
-        // 🚀 CRITICAL: Update status so the Double-Click Guard works,
-        // and link the student_id for your historical records!
         $enrollment->update([
             'status' => 'Approved',
             'student_id' => $student->id
         ]);
 
-        // Broadcast to update the Teacher's screen instantly
         broadcast(new StudentUpdated($student, $broadcastType))->toOthers();
 
         return redirect()->back()->with('success', $message);
@@ -167,7 +152,6 @@ class StudentController extends Controller
             abort(404, 'Document not found on server.');
         }
 
-        // 👈 This is the safest way to serve private files directly to the browser
         return Storage::response($path);
     }
 
@@ -178,7 +162,6 @@ class StudentController extends Controller
     {
         $enrollment = EnrollmentRequest::findOrFail($id);
 
-        // We still delete the files if rejected to prevent keeping sensitive data on the server
         Storage::delete($enrollment->birth_cert_path);
         Storage::delete($enrollment->parent_id_path);
 
@@ -198,7 +181,6 @@ class StudentController extends Controller
             'last_name' => 'required|string|max:255',
             'date_of_birth' => 'required|date',
             'daycare_name' => 'required|string|exists:daycares,name',
-            // 🚀 NEW: Validate the section!
             'section_id' => 'required|exists:sections,id',
             'nickname' => 'nullable|string|max:255',
             'gender' => 'required|string|max:50',
@@ -210,20 +192,13 @@ class StudentController extends Controller
         unset($validated['daycare_name']);
 
         $validated['daycare_id'] = $daycare->id;
-
-        // 🚀 NEW: Generate the 6-digit Secret PIN for the parent
         $validated['access_code'] = $this->generateUniqueAccessCode();
-
-        // Note: You can keep this 'Active', or change it to 'Pending' until the parent links their account!
         $validated['status'] = 'Active';
 
-        // 🚀 Ensure section_id is saved!
         $student = Student::create($validated);
 
-        // BROADCAST CREATE
         broadcast(new StudentUpdated($student, 'create'))->toOthers();
 
-        // Pass the generated code back to Inertia so the Admin can see it on screen
         return Redirect::route('admin.student.index')->with([
             'success' => 'Student created successfully.',
             'new_access_code' => $validated['access_code'],
@@ -231,11 +206,10 @@ class StudentController extends Controller
         ]);
     }
 
-    // 🚀 NEW: The safety-net function to guarantee 100% unique codes
     private function generateUniqueAccessCode()
     {
         do {
-            $code = strtoupper(Str::random(6)); // Generates something like "A7X9WQ"
+            $code = strtoupper(Str::random(6));
         } while (Student::where('access_code', $code)->exists());
 
         return $code;
@@ -254,7 +228,6 @@ class StudentController extends Controller
             'last_name' => 'required|string|max:255',
             'date_of_birth' => 'required|date',
             'daycare_name' => 'required|string|exists:daycares,name',
-            // 🚀 NEW: Validate the section!
             'section_id' => 'required|exists:sections,id',
             'nickname' => 'nullable|string|max:255',
             'gender' => 'required|string|max:50',
@@ -267,10 +240,8 @@ class StudentController extends Controller
 
         $validated['daycare_id'] = $daycare->id;
 
-        // 🚀 Ensure the new section_id is updated in the database
         $student->update($validated);
 
-        // 3. BROADCAST UPDATE
         broadcast(new StudentUpdated($student, 'update'))->toOthers();
 
         return Redirect::route('admin.student.index')->with('success', 'Student updated successfully.');
@@ -292,7 +263,6 @@ class StudentController extends Controller
         $student->save();
         $student->delete();
 
-        // 👇 4. BROADCAST ARCHIVE
         broadcast(new StudentUpdated($student, 'archive'))->toOthers();
 
         return Redirect::route('admin.student.index')->with('success', 'Student archived.');
@@ -312,7 +282,6 @@ class StudentController extends Controller
         $student->status = $validated['status'];
         $student->save();
 
-        // 👇 5. BROADCAST RESTORE
         broadcast(new StudentUpdated($student, 'restore'))->toOthers();
 
         return Redirect::route('admin.student.index')->with('success', 'Student restored.');
@@ -332,7 +301,6 @@ class StudentController extends Controller
         return Redirect::route('admin.student.index')->with('success', 'Student permanently deleted.');
     }
 
-
     /**
      * Bulk archive multiple students.
      */
@@ -345,24 +313,20 @@ class StudentController extends Controller
             'reason' => 'nullable|string',
         ]);
 
-        // Find all the selected students
         $students = Student::whereIn('id', $request->ids)->get();
 
         foreach ($students as $student) {
-            // Update their status and reason
             $student->status = $request->status;
             $student->archive_reason = $request->reason;
             $student->save();
-
-            // Soft delete them (moves them to archive)
             $student->delete();
 
-            // 🚀 MOVED INSIDE THE LOOP: Now it broadcasts EVERY student correctly as a Model!
             broadcast(new StudentUpdated($student, 'archive'))->toOthers();
-        } // 👈 Notice the broadcast is ABOVE this closing bracket now
+        }
 
         return back()->with('success', 'Students bulk archived successfully.');
     }
+
     /**
      * Bulk restore multiple students.
      */
@@ -381,7 +345,6 @@ class StudentController extends Controller
             $student->status = $validated['status'];
             $student->save();
 
-            // 👇 7. BROADCAST EACH RESTORE
             broadcast(new StudentUpdated($student, 'restore'))->toOthers();
         }
 
@@ -401,7 +364,6 @@ class StudentController extends Controller
         $students = Student::withTrashed()->whereIn('id', $validated['ids'])->get();
 
         foreach ($students as $student) {
-            // 👇 8. BROADCAST EACH DELETE
             broadcast(new StudentUpdated($student, 'delete'))->toOthers();
             $student->forceDelete();
         }
@@ -424,7 +386,6 @@ class StudentController extends Controller
             $student->update(['status' => 'Active']);
         }
 
-        // Broadcast update since parent/status changed
         broadcast(new StudentUpdated($student, 'update'))->toOthers();
 
         return redirect()->back()->with('success', 'Parent linked successfully.');
@@ -448,6 +409,12 @@ class StudentController extends Controller
         $errors = [];
         $rowNumber = 1;
 
+        // 🚀 OPTIMIZATION: Load Daycares ONCE into memory instead of querying for every row!
+        // This prevents the N+1 lag spike when importing large CSV files.
+        $daycareDictionary = Daycare::select('id', 'name')->get()->mapWithKeys(function ($item) {
+            return [strtolower(trim($item->name)) => $item->id];
+        });
+
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
             $firstName = $row[0] ?? null;
@@ -462,12 +429,15 @@ class StudentController extends Controller
                 continue;
             }
 
-            $daycare = Daycare::where('name', 'LIKE', trim($daycareName))->first();
+            $searchKey = strtolower(trim($daycareName));
 
-            if (!$daycare) {
+            // 🚀 Now it instantly checks memory instead of hitting the database
+            if (!isset($daycareDictionary[$searchKey])) {
                 $errors[] = "Row {$rowNumber}: Daycare '{$daycareName}' not found.";
                 continue;
             }
+
+            $daycareId = $daycareDictionary[$searchKey];
 
             try {
                 $student = Student::create([
@@ -476,13 +446,12 @@ class StudentController extends Controller
                     'last_name' => trim($lastName),
                     'date_of_birth' => \Carbon\Carbon::parse($dob)->format('Y-m-d'),
                     'gender' => ucfirst(strtolower(trim($gender))),
-                    'daycare_id' => $daycare->id,
+                    'daycare_id' => $daycareId,
                     'status' => 'Active',
                     'access_code' => strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1)) . '-' . rand(1000, 9999),
                 ]);
                 $importedCount++;
 
-                // 👇 9. BROADCAST IMPORTED STUDENT
                 broadcast(new StudentUpdated($student, 'create'))->toOthers();
 
             } catch (\Exception $e) {
@@ -507,7 +476,6 @@ class StudentController extends Controller
         $student->save();
         $student->delete();
 
-        // 👇 10. BROADCAST DESTROY (ARCHIVE)
         broadcast(new StudentUpdated($student, 'archive'))->toOthers();
 
         return Redirect::route('admin.student.index')->with('success', 'Student moved to archive.');
@@ -517,28 +485,24 @@ class StudentController extends Controller
     {
         $linkRequest = GuardianRequest::findOrFail($id);
 
-        // 1. Create the official link in your pivot table
         DB::table('student_parent')->insert([
             'student_id' => $linkRequest->student_id,
             'parent_id' => $linkRequest->user_id,
-            'relationship' => 'Parent', // Default relationship
-            'is_primary' => false, // Can be edited later
-            'status' => 'Active', // Instantly gives them dashboard access!
+            'relationship' => 'Parent',
+            'is_primary' => false,
+            'status' => 'Active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        // 2. Nuke the confidential files from the server (RA 10173 Compliance)
         Storage::delete([$linkRequest->birth_cert_path, $linkRequest->parent_id_path]);
 
-        // 3. Mark the request as Approved and clear the file paths
         $linkRequest->update([
             'status' => 'Approved',
-            'birth_cert_path' => null, // Clear the path since the file is gone
+            'birth_cert_path' => null,
             'parent_id_path' => null,
         ]);
 
-        // 4. Destroy the Secret PIN so it can never be used again
         $student = Student::find($linkRequest->student_id);
         if ($student) {
             $student->update(['access_code' => null]);
@@ -549,35 +513,33 @@ class StudentController extends Controller
 
     public function showSecureDoc($folder, $filename)
     {
-        // 1. Prevent hackers from typing random folder names
         if (!in_array($folder, ['birth_certs', 'parent_ids'])) {
             abort(404, 'Invalid folder.');
         }
 
         $path = 'documents/' . $folder . '/' . $filename;
 
-        // 2. 🚀 FIX: Explicitly check the 'local' disk so it doesn't get confused
         if (!Storage::disk('local')->exists($path)) {
-            // If it still fails, this will tell us exactly what path it is failing to find!
             abort(404, 'File not found at: ' . $path);
         }
 
-        // 3. 🚀 FIX: Explicitly stream from the 'local' disk
         return Storage::disk('local')->response($path);
     }
+
     public function printReport($id)
     {
+        // PERFORMANCE: Using Eager Loading correctly here!
         $student = Student::withTrashed()
             ->with(['daycare', 'parents'])
             ->findOrFail($id);
 
-        // 🚀 THE FIX: Calculate and attach the exact variable the Blade file is looking for!
         if ($student->date_of_birth) {
             $student->formatted_age = Carbon::parse($student->date_of_birth)->age . ' yrs old';
         } else {
             $student->formatted_age = 'N/A';
         }
 
+        // PERFORMANCE: Eager loading the domain and teacher stops N+1 lag on the PDF print
         $assessments = Assessment::where('student_id', $id)
             ->with(['scores.domain', 'teacher'])
             ->orderBy('created_at', 'asc')

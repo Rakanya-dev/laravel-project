@@ -9,9 +9,9 @@ use App\Models\Assessment;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Barryvdh\DomPDF\Facade\Pdf;
+
 class ReportController extends Controller
 {
-
     public function index()
     {
         // 1. Get all completed 3rd Assessments with their scores and domains
@@ -25,14 +25,12 @@ class ReportController extends Controller
 
         foreach ($assessments as $assessment) {
             foreach ($assessment->scores as $score) {
-                // We need the domain name to group them (e.g., 'Gross Motor')
                 $domainName = $score->domain->name;
 
                 if (!isset($domainStats[$domainName])) {
                     $domainStats[$domainName] = ['total' => 0, 'count' => 0];
                 }
 
-                // Add the scaled_score to the total and increment the count
                 $domainStats[$domainName]['total'] += $score->scaled_score;
                 $domainStats[$domainName]['count']++;
             }
@@ -43,7 +41,6 @@ class ReportController extends Controller
         foreach ($domainStats as $name => $stats) {
             $chartData[] = [
                 'domain' => $name,
-                // Round to 1 decimal place for cleaner charts
                 'averageScore' => $stats['count'] > 0 ? round($stats['total'] / $stats['count'], 1) : 0
             ];
         }
@@ -57,30 +54,29 @@ class ReportController extends Controller
         $inProgressCount = Assessment::where('assessment_type', '3rd Assessment')
             ->whereIn('status', ['Draft', 'In Progress'])->count();
 
-        // Anyone without a completed or in-progress assessment is missing it entirely
         $missingCount = max(0, $totalActiveStudents - ($completedCount + $inProgressCount));
 
         $complianceChartData = [
-            ['name' => 'Completed', 'value' => $completedCount, 'color' => '#10b981'], // Emerald
-            ['name' => 'In Progress', 'value' => $inProgressCount, 'color' => '#f59e0b'], // Amber
-            ['name' => 'Not Started', 'value' => $missingCount, 'color' => '#ef4444'], // Red
+            ['name' => 'Completed', 'value' => $completedCount, 'color' => '#10b981'],
+            ['name' => 'In Progress', 'value' => $inProgressCount, 'color' => '#f59e0b'],
+            ['name' => 'Not Started', 'value' => $missingCount, 'color' => '#ef4444'],
         ];
 
-        // Send it to the Inertia frontend!
         return inertia('admin/reports/index', [
             'domainReports' => $chartData,
             'complianceStats' => $complianceChartData
         ]);
     }
+
     public function exportMasterRoster(Request $request)
     {
         $fileName = 'graduating_class_roster_' . date('Y-m-d') . '.csv';
 
-        // 1. STRICT QUERY: Only get students who have a COMPLETED 3rd Assessment on the ECCD (Older Kids) form.
-        $students = Student::whereHas('assessments', function ($query) {
+        // 🚀 OPTIMIZATION: We build the query here, but we DO NOT use ->get() yet!
+        $query = Student::whereHas('assessments', function ($query) {
             $query->where('assessment_type', '3rd Assessment')
                 ->where('status', 'Completed')
-                ->where('form_type', 'record_2'); // record_2 is your ECCD form for 3-5 year olds!
+                ->where('form_type', 'record_2');
         })
             ->with([
                 'daycare',
@@ -93,10 +89,8 @@ class ReportController extends Controller
             ])
             ->whereNull('deleted_at')
             ->orderBy('daycare_id')
-            ->orderBy('last_name')
-            ->get();
+            ->orderBy('last_name');
 
-        // 2. Setup the CSV Stream
         $headers = [
             "Content-type" => "text/csv",
             "Content-Disposition" => "attachment; filename=$fileName",
@@ -105,7 +99,6 @@ class ReportController extends Controller
             "Expires" => "0"
         ];
 
-        // 3. Clean Columns (We don't need "Form Used" anymore since it's ONLY ECCD kids)
         $columns = [
             'Student ID',
             'Last Name',
@@ -117,30 +110,27 @@ class ReportController extends Controller
             'Graduation Status'
         ];
 
-        $callback = function () use ($students, $columns) {
+        // 🚀 OPTIMIZATION: We pass the $query into the callback
+        $callback = function () use ($query, $columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
 
-            foreach ($students as $student) {
-                // We know this exists now because of the strict query above!
+            // 🚀 OPTIMIZATION: cursor() streams rows 1-by-1 directly to the file. Zero memory bloat!
+            foreach ($query->cursor() as $student) {
                 $finalAssessment = $student->assessments->first();
 
-                // Check their final ECCD rating
                 $isDevelopmentallyOnTrack = in_array($finalAssessment->overall_rating, ['Average', 'Highly Advanced', 'Slight Delay']);
 
-                if ($isDevelopmentallyOnTrack) {
-                    $gradStatus = 'Ready for Kindergarten';
-                } else {
-                    // This catches "Significant Delay" or other low markers
-                    $gradStatus = 'Ready for Kindergarten (Needs SPED/Intervention Review)';
-                }
+                $gradStatus = $isDevelopmentallyOnTrack
+                    ? 'Ready for Kindergarten'
+                    : 'Ready for Kindergarten (Needs SPED/Intervention Review)';
 
                 $row = [
                     $student->id,
                     $student->last_name,
                     $student->first_name,
                     $student->daycare ? $student->daycare->name : 'Unassigned',
-                    $finalAssessment->assessment_date->format('M d, Y'), // Formatted nicely!
+                    $finalAssessment->assessment_date->format('M d, Y'),
                     $finalAssessment->overall_score,
                     $finalAssessment->overall_rating,
                     $gradStatus
@@ -159,12 +149,12 @@ class ReportController extends Controller
     {
         $fileName = 'compliance_audit_' . date('Y-m-d') . '.csv';
 
-        // Get all daycares with their active students and those students' assessments
-        $daycares = Daycare::with([
+        // 🚀 OPTIMIZATION: Build query, no ->get()
+        $query = Daycare::with([
             'students' => function ($query) {
                 $query->whereNull('deleted_at')->with('assessments');
             }
-        ])->get();
+        ]);
 
         $headers = [
             "Content-type" => "text/csv",
@@ -184,17 +174,18 @@ class ReportController extends Controller
             'Compliance Rate (%)'
         ];
 
-        $callback = function () use ($daycares, $columns) {
+        $callback = function () use ($query, $columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
 
             $periods = ['1st Assessment', '2nd Assessment', '3rd Assessment'];
 
-            foreach ($daycares as $daycare) {
+            // 🚀 OPTIMIZATION: Streaming daycares via cursor()
+            foreach ($query->cursor() as $daycare) {
                 $totalStudents = $daycare->students->count();
 
                 if ($totalStudents === 0) {
-                    continue; // Skip empty branches
+                    continue;
                 }
 
                 foreach ($periods as $period) {
@@ -239,7 +230,9 @@ class ReportController extends Controller
     public function exportConsolidatedReport(Request $request)
     {
         $fileName = 'consolidated_domain_report_' . date('Y-m-d') . '.pdf';
-        // 1. Get all daycares and their completed 3rd assessments
+
+        // Note: PDF generation requires all data upfront for the Blade view,
+        // so we keep ->get() here. This is perfectly fine for PDFs.
         $daycares = Daycare::with([
             'students' => function ($query) {
                 $query->whereNull('deleted_at')
@@ -255,7 +248,6 @@ class ReportController extends Controller
 
         $reportData = [];
 
-        // 2. Crunch the numbers per branch
         foreach ($daycares as $daycare) {
             $domainStats = [];
             $studentCount = 0;
@@ -275,7 +267,6 @@ class ReportController extends Controller
                 }
             }
 
-            // Format the averages for this branch
             $averages = [];
             foreach ($domainStats as $name => $stats) {
                 $averages[$name] = $stats['count'] > 0 ? round($stats['total'] / $stats['count'], 1) : 0;
@@ -288,7 +279,6 @@ class ReportController extends Controller
             ];
         }
 
-        // 3. Generate the PDF using a Blade view
         $pdf = Pdf::loadView('reports.consolidated-pdf', [
             'reportData' => $reportData,
             'date' => now()->format('F d, Y')

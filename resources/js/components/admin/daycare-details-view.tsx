@@ -647,43 +647,42 @@ export default function DaycareDetailsView({ daycare, onBack, onEdit, onDelete }
                                     </div>
                                 </section>
 
-                                {/* SECTION 2: Placement & Health */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <section className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100 shadow-sm space-y-5 relative overflow-hidden">
-                                        <div className="absolute -right-6 -top-6 size-24 rounded-full bg-indigo-100 blur-2xl"></div>
-                                        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-indigo-900 uppercase border-b border-indigo-100 pb-3 relative z-10">
-                                            <Building2 className="size-4 text-indigo-500" /> Placement
-                                        </h3>
-                                        <div className="space-y-5 relative z-10">
-                                            <div>
-                                                <Label className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Daycare Center</Label>
-                                                <p className="mt-1.5 text-base font-extrabold text-indigo-950">{daycare.name}</p>
-                                            </div>
-                                            <div>
-                                                <Label className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Assigned Session</Label>
-                                                <p className="mt-1.5 text-sm font-bold text-indigo-800">
-                                                    {(selectedStudent as any).section?.name || 'Unassigned Session'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </section>
-
-                                    <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
-                                        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 uppercase border-b border-slate-100 pb-3">
-                                            <HeartPulse className="size-4 text-red-500" /> Health & Notes
-                                        </h3>
+                                {/* SECTION 2: Center Placement */}
+                                <section className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100 shadow-sm space-y-5 relative overflow-hidden">
+                                    <div className="absolute -right-6 -top-6 size-24 rounded-full bg-indigo-100 blur-2xl"></div>
+                                    <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-indigo-900 uppercase border-b border-indigo-100 pb-3 relative z-10">
+                                        <Building2 className="size-4 text-indigo-500" /> Placement
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
                                         <div>
-                                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Allergies & General Notes</Label>
-                                            <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[110px]">
-                                                {(selectedStudent as any).notes ? (
-                                                    (selectedStudent as any).notes
-                                                ) : (
-                                                    <span className="text-slate-400 italic">No allergies or additional notes recorded for this child.</span>
-                                                )}
-                                            </div>
+                                            <Label className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Daycare Center</Label>
+                                            <p className="mt-1.5 text-base font-extrabold text-indigo-950">{daycare.name}</p>
                                         </div>
-                                    </section>
-                                </div>
+                                        <div>
+                                            <Label className="text-[10px] font-bold text-indigo-400/80 uppercase tracking-widest">Assigned Session</Label>
+                                            <p className="mt-1.5 text-sm font-bold text-indigo-800">
+                                                {(selectedStudent as any).section?.name || 'Unassigned Session'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* 🚀 SECTION 3: Unified General Notes */}
+                                <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                                    <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 uppercase border-b border-slate-100 pb-3">
+                                        <FileText className="size-4 text-indigo-500" /> General Notes & Remarks
+                                    </h3>
+                                    <div>
+                                        <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Additional Background</Label>
+                                        <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[110px]">
+                                            {(selectedStudent as any).notes ? (
+                                                (selectedStudent as any).notes
+                                            ) : (
+                                                <span className="text-slate-400 italic">No additional background or notes recorded.</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </section>
                             </div>
 
                             <DialogFooter className="p-5 border-t border-slate-100 bg-white flex flex-row justify-end items-center rounded-b-2xl">

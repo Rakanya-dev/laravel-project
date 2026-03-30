@@ -18,8 +18,9 @@ class AssessmentController extends Controller
 
         $parent = Auth::user();
 
-        // SECURITY: Check if this parent owns this student
-        if (!$parent->students()->where('students.id', $assessment->student_id)->exists()) {
+        // 🚀 OPTIMIZATION: Since we already eager-loaded 'student.parents' above,
+        // we can check memory instantly instead of making another trip to the database!
+        if (!$assessment->student->parents->contains('id', $parent->id)) {
             abort(403, 'Unauthorized access to this student record.');
         }
 

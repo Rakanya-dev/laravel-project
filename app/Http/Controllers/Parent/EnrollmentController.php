@@ -6,9 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\EnrollmentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // 👈 Added for Transactions
-use Illuminate\Support\Facades\Storage; // 👈 Added for File Cleanup
-use Illuminate\Support\Facades\Log; // 👈 Added for Error Logging
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use App\Models\Student;
 
 class EnrollmentController extends Controller
@@ -52,10 +52,8 @@ class EnrollmentController extends Controller
             DB::rollBack();
 
             // 🧹 Clean up the files if the DB failed!
-            if (isset($birthCertPath))
-                Storage::delete($birthCertPath);
-            if (isset($parentIdPath))
-                Storage::delete($parentIdPath);
+            if (isset($birthCertPath)) Storage::delete($birthCertPath);
+            if (isset($parentIdPath)) Storage::delete($parentIdPath);
 
             Log::error('New Enrollment failed: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong saving your application. Please try again.');
@@ -95,7 +93,8 @@ class EnrollmentController extends Controller
             return redirect()->route('parent.dashboard')->with('error', 'Please verify your PIN first.');
         }
 
-        $student = Student::find($studentId);
+        // 🚀 OPTIMIZATION: Only select the first and last name to save PHP memory
+        $student = Student::select('first_name', 'last_name')->find($studentId);
 
         return inertia('parent/link-documents', [
             'studentName' => $student->first_name . ' ' . $student->last_name,
@@ -149,28 +148,27 @@ class EnrollmentController extends Controller
             DB::rollBack();
 
             // 🧹 Clean up the files!
-            if (isset($birthCertPath))
-                Storage::delete($birthCertPath);
-            if (isset($parentIdPath))
-                Storage::delete($parentIdPath);
+            if (isset($birthCertPath)) Storage::delete($birthCertPath);
+            if (isset($parentIdPath)) Storage::delete($parentIdPath);
 
             Log::error('Link Documents failed: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong uploading your documents. Please try again.');
         }
     }
+
     public function showSecureDoc($folder, $filename)
     {
-        // 1. Construct the exact path where we saved it earlier
-        // It will look like: "private_docs/birth_certs/xyz123.pdf"
+        // 🚀 SECURITY FIX: Prevent Path Traversal Attacks (Hackers trying to read server files)
+        if (!in_array($folder, ['birth_certs', 'parent_ids'])) {
+            abort(404, 'Invalid directory access.');
+        }
+
         $path = "private_docs/{$folder}/{$filename}";
 
-        // 2. Safety Check: Does the file actually exist?
         if (!Storage::exists($path)) {
             abort(404, 'Document not found or has been deleted.');
         }
 
-        // 3. Return the file directly to the browser!
-        // Using response() instead of download() lets the browser display PDFs and Images right on the screen.
         return Storage::response($path);
     }
 }

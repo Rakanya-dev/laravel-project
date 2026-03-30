@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 
+// 👈 Import your new formatting function from wherever you saved it
+import { formatPhoneNumber } from '@/utils/phone';
+
 type RegisterForm = {
     first_name: string;
     middle_name: string;
@@ -24,18 +27,10 @@ export default function Register() {
         middle_name: '',
         last_name: '',
         email: '',
-        phone: '63',
+        phone: '',
         password: '',
         password_confirmation: '',
     });
-
-    const getFormattedPhone = (val: string) => {
-        const raw = val.startsWith('63') ? val.substring(2) : val;
-        if (raw.length === 0) return '';
-        if (raw.length <= 3) return raw;
-        if (raw.length <= 6) return `${raw.slice(0, 3)} ${raw.slice(3)}`;
-        return `${raw.slice(0, 3)} ${raw.slice(3, 6)} ${raw.slice(6, 10)}`;
-    };
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -106,28 +101,35 @@ export default function Register() {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="contact_number">Contact Number</Label>
-                        <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <span className="flex h-4 items-center justify-center border-r border-gray-300 pr-2 text-sm text-gray-500">+63</span>
-                            </div>
-                            <Input
-                                id="phone"
-                                type="tel"
-                                className="pl-14 tabular-nums"
-                                placeholder="912 345 6789"
-                                maxLength={14}
-                                value={getFormattedPhone(data.phone)}
-                                onChange={(e) => {
-                                    let raw = e.target.value.replace(/\D/g, '');
-                                    if (raw.startsWith('0')) raw = raw.substring(1);
-                                    if (raw.length > 10) raw = raw.substring(0, 10);
-                                    setData('phone', '63' + raw);
-                                }}
-                                required
-                                autoComplete="tel"
-                            />
-                        </div>
+                        <Label htmlFor="phone">Contact Number</Label>
+                        <Input
+                            id="phone"
+                            type="tel"
+                            className="tabular-nums"
+                            placeholder="+63 912 345 6789"
+                            maxLength={16} // limits exactly to "+63 912 345 6789" length
+                            value={formatPhoneNumber(data.phone)} // 👈 Using your new function here
+                            onChange={(e) => {
+                                // 1. Strip everything except numbers
+                                let raw = e.target.value.replace(/\D/g, '');
+
+                                // 2. Since your formatter adds +63, we need to strip it out
+                                // before saving to state, so we don't double up!
+                                if (raw.startsWith('63')) {
+                                    raw = raw.substring(2);
+                                } else if (raw.startsWith('0')) {
+                                    raw = raw.substring(1);
+                                }
+
+                                // 3. Ensure they can't type more than 10 digits after the 63
+                                if (raw.length > 10) raw = raw.substring(0, 10);
+
+                                // 4. Save to state exactly how Laravel expects it
+                                setData('phone', '63' + raw);
+                            }}
+                            required
+                            autoComplete="tel"
+                        />
                         <InputError message={errors.phone} />
                     </div>
 

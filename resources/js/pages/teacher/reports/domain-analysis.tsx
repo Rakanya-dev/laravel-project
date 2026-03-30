@@ -36,8 +36,8 @@ export default function DomainAnalysisReport({ chartData, insight, currentType, 
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Reports', href: '#' }, { title: 'Class Analysis', href: '#' }]}>
-            <Head title={`Class Analysis - ${currentType}`} />
+        <AppLayout breadcrumbs={[{ title: 'Reports', href: '#' }, { title: 'Class Developmental Summary', href: '#' }]}>
+            <Head title={`Class Developmental Summary- ${currentType}`} />
 
             <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
 
@@ -59,7 +59,7 @@ export default function DomainAnalysisReport({ chartData, insight, currentType, 
                             <BrainCircuit className="size-7" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Class Performance Analysis</h2>
+                            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Class Developmental Summary</h2>
                             <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-500">
                                 <Users className="size-4" />
                                 Aggregated data from <strong className="text-slate-700">{studentCount} evaluations</strong>

@@ -18,20 +18,26 @@ class DashboardController extends Controller
         $user = Auth::user();
 
         // --- Obj A: Digital Tracking (Learners) ---
-        $totalLearners = Student::count();
-        $activeLearners = Student::where('status', 'Active')->count();
+        // 🚀 OPTIMIZATION 1: Single Trip Aggregation (1 query instead of 2)
+        $studentStats = Student::selectRaw("
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END) as active
+        ")->first();
 
         // 🚀 THIS IS NOW OUR MAIN APPROVAL METRIC
         $pendingEnrollments = EnrollmentRequest::where('status', 'Pending')->count();
 
         // --- Obj B: Analytics (Assessments) ---
-        $totalAssessments = Assessment::count();
-        $reportsGenerated = Assessment::where('status', 'Completed')->count();
-        $flaggedResults = Assessment::where('status', 'Flagged')->count();
+        // 🚀 OPTIMIZATION 2: Single Trip Aggregation (1 query instead of 3)
+        $assessmentStats = Assessment::selectRaw("
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN status = 'Flagged' THEN 1 ELSE 0 END) as flagged
+        ")->first();
 
         // --- Obj D: System Management (Centers & Staff) ---
-        $nonHeadOfficeDaycareQuery = Daycare::where('name', '!=', 'KIDTRAK Head Office');
-        $totalCenters = $nonHeadOfficeDaycareQuery->count();
+        // Cleaned up unused variable assignment
+        $totalCenters = Daycare::where('name', '!=', 'KIDTRAK Head Office')->count();
 
         // Count active teachers/CDWs (excluding admins and parents)
         $activeStaff = User::where('role', 'teacher')
@@ -49,15 +55,17 @@ class DashboardController extends Controller
         // 🚀 FIRE IT TO THE FRONTEND
         return Inertia::render('admin/dashboard', [
             'adminName' => $user->first_name,
-            'totalLearners' => $totalLearners,
-            'activeLearners' => $activeLearners,
+
+            // Cast to (int) to ensure the frontend receives strict numbers, not numeric strings
+            'totalLearners' => (int) ($studentStats->total ?? 0),
+            'activeLearners' => (int) ($studentStats->active ?? 0),
 
             // 🚀 Replaces Obj C entirely
             'pendingEnrollments' => $pendingEnrollments,
 
-            'totalAssessments' => $totalAssessments,
-            'reportsGenerated' => $reportsGenerated,
-            'flaggedResults' => $flaggedResults,
+            'totalAssessments' => (int) ($assessmentStats->total ?? 0),
+            'reportsGenerated' => (int) ($assessmentStats->completed ?? 0),
+            'flaggedResults' => (int) ($assessmentStats->flagged ?? 0),
 
             'totalCenters' => $totalCenters,
             'activeStaff' => $activeStaff,

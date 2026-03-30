@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { User } from './admin-user-management';
-import { Mail, Phone, School, UserPen, Save, X, Baby, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, School, UserPen, Save, X, Baby } from 'lucide-react'; // 🚀 Removed ShieldCheck
 
 import { formatPhoneNumber } from '@/utils/phone';
 
@@ -59,7 +59,7 @@ export default function EditUserDialog({
             Edit {userType === 'parent' ? 'Parent / Guardian' : 'Teacher'}
           </DialogTitle>
           <DialogDescription className="text-sm font-medium text-slate-500">
-            Update the contact details, center assignment, and access status.
+            Update the contact details and center assignment.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,53 +146,32 @@ export default function EditUserDialog({
             </div>
           </div>
 
-          {/* 🚀 NEW: Placement & Status Side-by-Side */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">
-                {userType === 'parent' ? 'Linked Center' : 'Assigned Center'} <span className="text-red-500">*</span>
-              </Label>
-              <div className="relative">
-                <School className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 z-10" />
-                <Select
-                  value={currentDaycareName}
-                  onValueChange={(value) => onUserChange({ ...user, daycare: value })}
-                >
-                  <SelectTrigger className="h-11 pl-10 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-indigo-500 font-medium text-slate-900">
-                    <SelectValue placeholder="Select a center..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {daycareList.map((dc, index) => {
-                      const dcName = typeof dc === 'string' ? dc : dc.name;
-                      return (
-                        <SelectItem key={index} value={dcName} className="font-medium">
-                          {dcName}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="font-bold text-slate-700">Account Status <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 z-10" />
-                <Select
-                  value={user.status || 'Active'}
-                  onValueChange={(value) => onUserChange({ ...user, status: value })}
-                >
-                  <SelectTrigger className="h-11 pl-10 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-indigo-500 font-medium text-slate-900">
-                    <SelectValue placeholder="Select status..." />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="Active" className="font-bold text-emerald-600">Active (Granted)</SelectItem>
-                    <SelectItem value="Pending" className="font-bold text-amber-600">Pending (Awaiting)</SelectItem>
-                    <SelectItem value="Inactive" className="font-bold text-slate-500">Inactive (Revoked)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Placement */}
+          {/* 🚀 REMOVED: Status dropdown and changed grid to a single column block */}
+          <div className="space-y-2">
+            <Label className="font-bold text-slate-700">
+              {userType === 'parent' ? 'Linked Center' : 'Assigned Center'} <span className="text-red-500">*</span>
+            </Label>
+            <div className="relative">
+              <School className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 z-10" />
+              <Select
+                value={currentDaycareName}
+                onValueChange={(value) => onUserChange({ ...user, daycare: value })}
+              >
+                <SelectTrigger className="h-11 pl-10 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-indigo-500 font-medium text-slate-900">
+                  <SelectValue placeholder="Select a center..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {daycareList.map((dc, index) => {
+                    const dcName = typeof dc === 'string' ? dc : dc.name;
+                    return (
+                      <SelectItem key={index} value={dcName} className="font-medium">
+                        {dcName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

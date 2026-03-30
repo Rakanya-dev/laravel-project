@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import type { Student } from '@/pages/admin/student-management';
-import { Edit2, Baby, Building2, HeartPulse, UserCircle2, Users, CalendarDays, ClipboardCheck, X, Activity, FileText, StickyNote } from 'lucide-react';
+import { Edit2, Baby, Building2, UserCircle2, Users, CalendarDays, ClipboardCheck, X, Activity, FileText, StickyNote } from 'lucide-react';
 
 // 🚀 IMPORT NEW DATE TOOLKITS
 import { formatPHDate, calculateAge } from '@/utils/date';
@@ -147,74 +147,40 @@ export function StudentDetailDialog({ student, onOpenChange, onOpenEdit }: Stude
                     </section>
                 </div>
 
-                {/* 🚀 SECTION 3: Smart Notes */}
-                {!isActuallyArchived ? (
-                    // ACTIVE STUDENT VIEW: Shows Health & Allergies
-                    <section className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                {/* 🚀 SECTION 3: Unified General Notes */}
+                <section className="space-y-6">
+                    {/* General Notes Block (Shows for both Active and Archived if it exists) */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
                         <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 uppercase border-b border-slate-100 pb-3">
-                            <HeartPulse className="size-4 text-red-500" /> Health & Notes
+                            <FileText className="size-4 text-indigo-500" /> General Notes & Remarks
                         </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div>
-                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Special Needs</Label>
-                                <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[80px]">
-                                    {student.special_needs ? (
-                                        student.special_needs
-                                    ) : (
-                                        <span className="text-slate-400 italic">No special needs reported.</span>
-                                    )}
-                                </div>
+                        <div>
+                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Additional Background</Label>
+                            <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[80px]">
+                                {student.notes ? (
+                                    student.notes
+                                ) : (
+                                    <span className="text-slate-400 italic">No additional background or notes recorded.</span>
+                                )}
                             </div>
-                            <div>
-                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Allergies & General Notes</Label>
-                                <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100 min-h-[80px]">
-                                    {student.notes ? (
-                                        student.notes
-                                    ) : (
-                                        <span className="text-slate-400 italic">No allergies or additional notes.</span>
-                                    )}
+                        </div>
+                    </div>
+
+                    {/* Amber Archive Reason Sticky Note (Only shows if Archived) */}
+                    {isActuallyArchived && student.archiveReason && (
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
+                            <div className="flex items-start gap-4">
+                                <div className="rounded-full bg-amber-100 p-2 text-amber-600">
+                                    <StickyNote className="size-5" />
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-[11px] font-bold tracking-wide text-amber-800 uppercase">Archive Reason</p>
+                                    <p className="text-sm font-medium leading-relaxed text-slate-800 italic">"{student.archiveReason}"</p>
                                 </div>
                             </div>
                         </div>
-                    </section>
-                ) : (
-                    // ARCHIVED STUDENT VIEW
-                    <section className="space-y-6">
-                        {/* 🚀 THE FIX: Only render General Notes if they exist AND are completely different from the archive reason */}
-                        {student.notes && student.notes !== student.archiveReason && (
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-5">
-                                <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 uppercase border-b border-slate-100 pb-3">
-                                    <FileText className="size-4 text-indigo-400" /> General Notes & Remarks
-                                </h3>
-                                <div className="mt-2 text-sm font-medium text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                    {student.notes}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Amber Archive Reason Sticky Note */}
-                        {student.archiveReason && (
-                            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                                <div className="flex items-start gap-4">
-                                    <div className="rounded-full bg-amber-100 p-2 text-amber-600">
-                                        <StickyNote className="size-5" />
-                                    </div>
-                                    <div>
-                                        <p className="mb-1 text-[11px] font-bold tracking-wide text-amber-800 uppercase">Archive Reason</p>
-                                        <p className="text-sm font-medium leading-relaxed text-slate-800 italic">"{student.archiveReason}"</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Fallback if both are completely empty */}
-                        {!student.archiveReason && !student.notes && (
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-center">
-                                <span className="text-slate-400 italic text-sm">No archive reasons or notes recorded for this learner.</span>
-                            </div>
-                        )}
-                    </section>
-                )}
+                    )}
+                </section>
 
             </div>
 

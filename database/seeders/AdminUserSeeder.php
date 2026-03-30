@@ -11,17 +11,17 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::firstOrCreate(
-            ['email' => 'admin@kidtrak.ph'],
+            ['email' => 'laravelkidtrak@gmail.com'],
             [
                 'daycare_id' => null,
                 'password' => Hash::make('password123'),
                 'role' => 'admin',
-                'first_name' => 'Admin',
-                'last_name' => 'User',
-                // Updated to 8-digit format (standard in MM) or generic mobile
-                'phone' => '09170000000',
+                'first_name' => 'Juan',
+                'middle_name' => 'Dela', // 👈 Can be a string or simply null
+                'last_name' => 'Cruz',
+                'phone' => '+639170000000',
                 'status' => 'Active',
-                'email_verified_at' => now(), // 👈 This instantly verifies the account
+                'email_verified_at' => now(),
             ]
         );
     }

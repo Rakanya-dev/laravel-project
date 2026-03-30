@@ -32,9 +32,10 @@ class AssessmentController extends Controller
     {
         $daycareId = $this->getTeacherDaycareId();
 
-        $students = Student::where('daycare_id', $daycareId)
-            ->with('daycare:id,name')
-            ->get(['id', 'daycare_id', 'first_name', 'middle_name', 'last_name', 'date_of_birth']);
+        // 🚀 OPTIMIZATION 1: Fetch students ONCE with sections, instead of querying again at the end!
+        $students = Student::with(['daycare:id,name', 'section'])
+            ->where('daycare_id', $daycareId)
+            ->get();
 
         $studentIds = $students->pluck('id');
 
@@ -80,9 +81,7 @@ class AssessmentController extends Controller
 
         return Inertia::render('teacher/assessments-management', [
             'assessments' => $assessmentsWithNumbers,
-            'students' => Student::with('section')
-                ->where('daycare_id', $daycareId)
-                ->get(),
+            'students' => $students, // 👈 Reused the memory collection here
             'domains' => $domains,
         ]);
     }
@@ -93,21 +92,17 @@ class AssessmentController extends Controller
         return $this->redirectToForm($assessment->student, $assessment->id);
     }
 
-    // 👇 ADDED: The missing edit method to satisfy the router!
     public function edit($id)
     {
         $daycareId = $this->getTeacherDaycareId();
 
-        // Fetch it securely
         $assessment = Assessment::where('daycare_id', $daycareId)
             ->with('student')
             ->findOrFail($id);
 
-        // Hand it off to your existing smart router
         return $this->redirectToForm($assessment->student, $assessment->id);
     }
 
-    // 🚀 NEW: Smart Create with Baseline Calculation
     public function create(Request $request, EccdScoringService $scoringService)
     {
         $studentId = $request->query('student_id');
@@ -136,7 +131,6 @@ class AssessmentController extends Controller
         $typeNames = ['1st Assessment', '2nd Assessment', '3rd Assessment'];
         $nextType = $typeNames[$completedCount] ?? 'Follow-up';
 
-        // 🚀 Exact Age Snapshot & Strict Boundary
         $dob = Carbon::parse($student->date_of_birth);
         $evalDate = now();
         $age = $dob->diff($evalDate);
@@ -163,7 +157,6 @@ class AssessmentController extends Controller
         $scoresToInsert = [];
 
         foreach ($domains as $domain) {
-            // 🚀 The Magic: Calculate what a raw score of 0 means right now
             $initialScaled = $isEccd
                 ? $scoringService->getScaledScore($domain->name, 0, $age->y, $age->m)
                 : 0;
@@ -189,7 +182,6 @@ class AssessmentController extends Controller
         return $this->redirectToForm($student, $assessment->id);
     }
 
-    // 🚀 NEW: Smart Bulk Store with Baseline Calculation
     public function bulkStore(Request $request, EccdScoringService $scoringService)
     {
         $request->validate([
@@ -202,13 +194,25 @@ class AssessmentController extends Controller
         $domains = AssessmentDomain::where('is_active', true)->get();
         $count = 0;
 
-        foreach ($request->assessments as $data) {
-            $existingDraft = Assessment::where('student_id', $data['student_id'])
-                ->where('assessment_type', $data['assessment_type'])
-                ->first();
+        // 🚀 OPTIMIZATION 2: Pre-fetch students and existing drafts BEFORE the loop to avoid N+1 DB hits
+        $studentIds = collect($request->assessments)->pluck('student_id')->unique();
+        $students = Student::whereIn('id', $studentIds)->get()->keyBy('id');
 
-            if (!$existingDraft) {
-                $student = Student::findOrFail($data['student_id']);
+        $assessmentTypes = collect($request->assessments)->pluck('assessment_type')->unique();
+        $existingDrafts = Assessment::whereIn('student_id', $studentIds)
+            ->whereIn('assessment_type', $assessmentTypes)
+            ->get()
+            ->keyBy(fn($item) => $item->student_id . '_' . $item->assessment_type);
+
+        foreach ($request->assessments as $data) {
+            $draftKey = $data['student_id'] . '_' . $data['assessment_type'];
+
+            // Fast memory check instead of DB hit
+            if (!$existingDrafts->has($draftKey)) {
+                $student = $students->get($data['student_id']);
+
+                if (!$student) continue;
+
                 $dob = Carbon::parse($student->date_of_birth);
                 $evalDate = now();
                 $age = $dob->diff($evalDate);
@@ -216,7 +220,7 @@ class AssessmentController extends Controller
                 $isEccd = $totalMonths >= 37;
 
                 $assessment = Assessment::create([
-                    'student_id' => $data['student_id'],
+                    'student_id' => $student->id,
                     'teacher_id' => Auth::id(),
                     'daycare_id' => $daycareId,
                     'assessment_type' => $data['assessment_type'],
@@ -280,7 +284,6 @@ class AssessmentController extends Controller
         $assessmentDate = Carbon::parse($assessment->assessment_date);
         $age = $dob->diff($assessmentDate);
 
-        // 🚀 Strict Boundary Check
         $totalMonths = ($age->y * 12) + $age->m;
         $isEccd = $totalMonths >= 37;
 
@@ -288,10 +291,16 @@ class AssessmentController extends Controller
         $totalRawScore = 0;
         $totalMaxPossible = 0;
 
+        // 🚀 OPTIMIZATION 3: Fetch all submitted scores in ONE query instead of looping DB hits
+        $scoreIds = collect($validated['scores'])->pluck('id');
+        $scoreRows = AssessmentScore::with('domain')
+            ->where('assessment_id', $assessment->id)
+            ->whereIn('id', $scoreIds)
+            ->get()
+            ->keyBy('id');
+
         foreach ($validated['scores'] as $scoreData) {
-            $scoreRow = AssessmentScore::with('domain')
-                ->where('assessment_id', $assessment->id)
-                ->find($scoreData['id']);
+            $scoreRow = $scoreRows->get($scoreData['id']);
 
             if (!$scoreRow)
                 continue;
@@ -364,7 +373,6 @@ class AssessmentController extends Controller
 
     private function redirectToForm($student, $assessmentId)
     {
-        // 🚀 Strict Boundary applied to redirects as well!
         $ageInMonths = Carbon::parse($student->date_of_birth)->diffInMonths(now());
 
         if ($ageInMonths <= 36) {

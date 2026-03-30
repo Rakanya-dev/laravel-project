@@ -13,6 +13,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Storage;
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, SoftDeletes, LogsActivity, TwoFactorAuthenticatable;
@@ -23,6 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_name',
         'email',
         'phone',
+        'profile_photo',
         'role',
         'password',
         'status',
@@ -35,6 +38,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'two_factor_recovery_codes', // 👈 Add this
         'two_factor_secret',
+        'avatar',
+        'profile_photo_url',
+
     ];
 
     protected $appends = ['is_online'];
@@ -97,5 +103,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function receivedMessages()
     {
         return $this->hasMany(Message::class, 'recipient_id');
+    }
+
+    protected function avatar(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->profile_photo
+            ? Storage::disk('public')->url($this->profile_photo)
+            : null,
+        );
+    }
+
+    // 👈 4. The "Bridge" for your Upload Preview
+    protected function profilePhotoUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->avatar ?? "https://ui-avatars.com/api/?name=" . urlencode($this->first_name),
+        );
     }
 }

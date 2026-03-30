@@ -43,7 +43,7 @@ return new class extends Migration {
             $table->date('enrollment_date')->nullable();
             $table->date('expected_graduation_date')->nullable();
             $table->string('profile_photo')->nullable();
-            $table->string('status')->default('active');
+            $table->string('status')->default('Active');
             $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();

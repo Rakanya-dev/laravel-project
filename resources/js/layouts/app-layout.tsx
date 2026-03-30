@@ -10,7 +10,6 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, breadcrumbs, ...props }: AppLayoutProps) {
-    usePoll(1000, {}, { keepAlive: true });
 
     // 1. Get the authenticated user from Inertia props
     const { auth } = usePage().props as any;
