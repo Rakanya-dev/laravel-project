@@ -21,7 +21,7 @@ class UserObserver
   public function updated(User $user)
     {
         // Check if the status CHANGED to 'active' (Approved)
-        if ($user->wasChanged('status') && $user->status === 'active') {
+        if ($user->wasChanged('status') && $user->status === 'Active') {
 
             // Logic: Find any students waiting for this parent
             $studentsToLink = Student::where('guardian_email', $user->email)

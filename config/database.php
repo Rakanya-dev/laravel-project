@@ -45,20 +45,24 @@ return [
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '3306'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
+            'host' => env('DB_HOST', 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com'), // 👈 Uses DB_HOST from your .env
+            'port' => env('DB_PORT', '4000'),      // 👈 Uses DB_PORT from your .env
+            'database' => env('DB_DATABASE', 'kidtrak_db'),
+            'username' => env('DB_USERNAME', 'R9TSe1WYsYUi4iZ.vu-EfhlcNr6'),
+            'password' => env('DB_PASSWORD', '4YZ6RmZtG5wr6cd6z9CnS9H0xw%JYLRWoQM6'),
             'unix_socket' => env('DB_SOCKET', ''),
-            'charset' => env('DB_CHARSET', 'utf8mb4'),
-            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
+                    // 🛡️ Required for TiDB Cloud
                 (defined('Pdo\Mysql::ATTR_SSL_CA') ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+
+                // 🚀 CRITICAL: This is the "secret" yesterday - TiDB needs this!
+                PDO::ATTR_EMULATE_PREPARES => true,
             ]) : [],
         ],
 
