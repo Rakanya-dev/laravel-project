@@ -29,7 +29,7 @@ export function ImportStudentsDialog({ onClose }: Props) {
 
     // CSV Template Data
     const downloadTemplate = () => {
-        const csvContent = "First Name,Middle Name,Last Name,Date of Birth (YYYY-MM-DD),Gender,Daycare Name\nJuan,,Dela Cruz,2019-05-20,Male,Happy Kids Center";
+        const csvContent = "First Name,Middle Name,Last Name,Date of Birth (YYYY-MM-DD),Gender,Daycare Name\nJuan,Santos,Dela Cruz,2019-05-20,Male,Sto. Nino Child Development Center";
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
