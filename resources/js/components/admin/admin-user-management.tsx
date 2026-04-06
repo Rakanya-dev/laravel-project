@@ -8,7 +8,6 @@ import EditUserDialog from './edit-user-dialog';
 import UserActionDialogs from './user-action-dialog';
 import { router } from '@inertiajs/react';
 
-
 export interface User {
     id: number;
     firstName?: string;
@@ -84,19 +83,19 @@ export default function AdminUserManagement({
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 transition-colors duration-200">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
+                    <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                         ECCD User Management
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                         Manage Child Development Workers and Parents across all centers.
                     </p>
                 </div>
                 {userTab === 'teachers' && (
                     <Button
-                        className="h-10 rounded-xl bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
+                        className="h-10 rounded-xl bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-colors"
                         onClick={() => setIsAddTeacherOpen(true)}
                     >
                         <UserPlus className="mr-2 size-4" />
@@ -105,13 +104,13 @@ export default function AdminUserManagement({
                 )}
             </div>
 
-            <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center gap-6 border-b border-slate-100 bg-slate-50/50 px-6 pt-4">
+            <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors duration-200">
+                <div className="flex items-center gap-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 px-6 pt-4">
                     <button
                         onClick={() => setUserTab('teachers')}
                         className={`relative pb-3 text-sm font-bold tracking-wide transition-colors ${userTab === 'teachers'
-                            ? 'border-b-2 border-indigo-600 text-indigo-700'
-                            : 'text-slate-500 hover:text-slate-800'
+                            ? 'border-b-2 border-indigo-600 text-indigo-700 dark:border-indigo-500 dark:text-indigo-400'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                             }`}
                     >
                         Child Development Workers
@@ -119,8 +118,8 @@ export default function AdminUserManagement({
                     <button
                         onClick={() => setUserTab('parents')}
                         className={`relative pb-3 text-sm font-bold tracking-wide transition-colors ${userTab === 'parents'
-                            ? 'border-b-2 border-indigo-600 text-indigo-700'
-                            : 'text-slate-500 hover:text-slate-800'
+                            ? 'border-b-2 border-indigo-600 text-indigo-700 dark:border-indigo-500 dark:text-indigo-400'
+                            : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
                             }`}
                     >
                         Parent Accounts
@@ -140,9 +139,9 @@ export default function AdminUserManagement({
                 </div>
             </div>
 
-            {/* 🚀 NEW: Minimalist < > Pagination */}
+            {/* 🚀 Minimalist < > Pagination with Dark Mode */}
             <div className="mt-4 flex w-full items-center justify-end gap-3 pr-2">
-                <span className="text-sm font-medium text-slate-500">
+                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     Page {currentPagination?.current_page || 1} of {currentPagination?.last_page || 1}
                 </span>
 
@@ -150,7 +149,7 @@ export default function AdminUserManagement({
                     <Button
                         variant="outline"
                         size="icon"
-                        className="size-9 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                        className="size-9 rounded-xl border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-white disabled:opacity-50 transition-colors"
                         disabled={!currentLinks[0]?.url}
                         onClick={() => currentLinks[0]?.url && router.get(currentLinks[0].url, {}, { preserveState: true, preserveScroll: true })}
                     >
@@ -160,7 +159,7 @@ export default function AdminUserManagement({
                     <Button
                         variant="outline"
                         size="icon"
-                        className="size-9 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                        className="size-9 rounded-xl border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 dark:hover:text-white disabled:opacity-50 transition-colors"
                         disabled={!currentLinks[currentLinks.length - 1]?.url}
                         onClick={() => currentLinks[currentLinks.length - 1]?.url && router.get(currentLinks[currentLinks.length - 1].url, {}, { preserveState: true, preserveScroll: true })}
                     >

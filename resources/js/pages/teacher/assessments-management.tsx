@@ -55,20 +55,19 @@ export default function AssessmentManagementPage() {
 
     useEffect(() => {
         if (!user?.daycare_id) return;
-
         const channelName = `daycare.${user.daycare_id}`;
 
-        window.Echo.private(channelName)
-            .listen('.assessment.updated', (e: any) => {
-                router.reload({
-                    only: ['assessments'],
-                    // Using @ts-ignore for the preserveScroll bug below
-                    // @ts-ignore
-                    preserveScroll: true
+        if (window.Echo) {
+            window.Echo.private(channelName)
+                .listen('.assessment.updated', (e: any) => {
+                    router.reload({
+                        only: ['assessments'],
+                        // @ts-ignore
+                        preserveScroll: true
+                    });
                 });
-            });
-
-        return () => window.Echo.leave(channelName);
+        }
+        return () => { if (window.Echo) window.Echo.leave(channelName); };
     }, [user?.daycare_id]);
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +78,6 @@ export default function AssessmentManagementPage() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const availableSections = useMemo(() => {
-        // Change s.section_name to s.section?.name
         const sections = (rawStudents || []).map((s: any) => s.section?.name || s.section_name).filter(Boolean) as string[];
         return Array.from(new Set(sections)).sort();
     }, [rawStudents]);
@@ -89,8 +87,6 @@ export default function AssessmentManagementPage() {
             .filter((student: any) => {
                 const fullName = `${student.first_name} ${student.last_name}`.toLowerCase();
                 const matchesSearch = fullName.includes(searchQuery.toLowerCase());
-
-                // Get the actual session name, checking both nested and flat structures
                 const studentSession = student.section?.name || student.section_name;
 
                 let matchesSession = true;
@@ -101,13 +97,10 @@ export default function AssessmentManagementPage() {
                         matchesSession = studentSession === sectionFilter;
                     }
                 }
-
                 return matchesSearch && matchesSession;
             })
             .map((student: any) => {
                 const history = (rawAssessments || []).filter((a) => a.student_id === student.id);
-
-                // Get the actual session name here too
                 const studentSession = student.section?.name || student.section_name;
 
                 return {
@@ -116,10 +109,7 @@ export default function AssessmentManagementPage() {
                     lastName: student.last_name,
                     name: formatName(student),
                     age: calculateAge(student.date_of_birth),
-
-                    // 👇 Use the resolved session name here
                     sessionName: studentSession || 'Unassigned',
-
                     assessments: {
                         '1st Assessment': history.find((a) => a.assessment_type === '1st Assessment'),
                         '2nd Assessment': history.find((a) => a.assessment_type === '2nd Assessment'),
@@ -170,8 +160,8 @@ export default function AssessmentManagementPage() {
 
         if (isLoading) {
             return (
-                <div className="flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-slate-50/50 shadow-inner">
-                    <Loader2 className="size-4 animate-spin text-blue-500" />
+                <div className="flex h-11 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 shadow-inner">
+                    <Loader2 className="size-4 animate-spin text-indigo-500" />
                 </div>
             );
         }
@@ -180,10 +170,10 @@ export default function AssessmentManagementPage() {
             return (
                 <div
                     title="Complete previous evaluation first"
-                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 cursor-not-allowed text-slate-400"
+                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-zinc-950/30 cursor-not-allowed text-slate-400 dark:text-slate-600 transition-colors"
                 >
                     <Lock className="size-3.5 opacity-60" />
-                    <span className="text-[10px] font-semibold uppercase tracking-wider opacity-60">Locked</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Locked</span>
                 </div>
             );
         }
@@ -192,10 +182,10 @@ export default function AssessmentManagementPage() {
             return (
                 <button
                     onClick={() => startNewAssessment(studentId, type)}
-                    className="group flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-blue-300 bg-blue-50/30 text-blue-600 transition-all hover:border-blue-500 hover:bg-blue-50 hover:shadow-sm"
+                    className="group flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 transition-all hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-sm"
                 >
-                    <Plus className="size-3.5 transition-transform group-hover:scale-110 group-hover:text-blue-700" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider group-hover:text-blue-700">Evaluate</span>
+                    <Plus className="size-3.5 transition-transform group-hover:scale-110" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Evaluate</span>
                 </button>
             );
         }
@@ -204,15 +194,15 @@ export default function AssessmentManagementPage() {
             return (
                 <button
                     onClick={() => openAssessment(assessment.id)}
-                    className="group flex h-11 w-full items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 transition-all hover:bg-emerald-100 hover:border-emerald-300 hover:shadow-sm"
+                    className="group flex h-11 w-full items-center justify-between rounded-xl border border-emerald-200 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-500/10 px-3 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-500/20 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:shadow-sm"
                 >
-                    <div className="flex items-center gap-2 text-emerald-700">
+                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                         <CheckCircle2 className="size-4" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider">Done</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Done</span>
                     </div>
                     <div className="flex flex-col items-end justify-center leading-none">
-                        <span className="text-[9px] font-bold uppercase text-emerald-600/60 mb-0.5">Score</span>
-                        <span className="text-sm font-black text-emerald-800">{assessment.overall_score ?? '-'}</span>
+                        <span className="text-[8px] font-bold uppercase text-emerald-600/60 dark:text-emerald-400/50 mb-0.5">Score</span>
+                        <span className="text-sm font-black text-emerald-800 dark:text-emerald-200">{assessment.overall_score ?? '-'}</span>
                     </div>
                 </button>
             );
@@ -221,103 +211,98 @@ export default function AssessmentManagementPage() {
         return (
             <button
                 onClick={() => openAssessment(assessment.id)}
-                className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 transition-all hover:border-amber-300 hover:bg-amber-100 hover:shadow-sm"
+                className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 transition-all hover:border-amber-300 dark:hover:border-amber-500/50 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:shadow-sm"
             >
-                <FileEdit className="size-4 text-amber-600" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">Resume</span>
+                <FileEdit className="size-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Resume</span>
             </button>
         );
     };
-
-
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Evaluation Matrix" />
 
-            <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8">
+            <div className="w-full space-y-6 p-4 sm:p-6 lg:p-8 transition-colors duration-200">
 
                 {/* --- HERO HEADER --- */}
-                <div className="flex flex-col justify-between gap-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-200 sm:flex-row sm:items-center">
+                <div className="flex flex-col justify-between gap-6 rounded-2xl bg-white dark:bg-zinc-900 p-6 shadow-sm border border-slate-200 dark:border-slate-800 sm:flex-row sm:items-center transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 shadow-inner">
+                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 shadow-inner">
                             <BookOpen className="size-7" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">ECCD Evaluation Matrix</h2>
-                            <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-500">
+                            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white transition-colors">ECCD Evaluation Matrix</h2>
+                            <p className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 transition-colors">
                                 <Users className="size-4" />
-                                Tracking progress for <strong className="text-slate-700">{gradebookData.length} students</strong>
+                                Tracking progress for <strong className="text-slate-700 dark:text-slate-200">{gradebookData.length} students</strong>
                             </p>
                         </div>
                     </div>
 
                     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
                         <Select value={sectionFilter} onValueChange={setSectionFilter}>
-                            <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-slate-50 font-medium text-slate-700 focus:ring-blue-500 sm:w-[200px]">
+                            <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 font-medium text-slate-700 dark:text-slate-300 focus:ring-indigo-500 transition-colors sm:w-[200px]">
                                 <SelectValue placeholder="All Sessions" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Sessions</SelectItem>
+                            <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Sessions</SelectItem>
                                 {availableSections.map((sec) => (
-                                    <SelectItem key={sec} value={sec}>{sec}</SelectItem>
+                                    <SelectItem key={sec} value={sec} className="dark:text-slate-200 dark:focus:bg-zinc-800">{sec}</SelectItem>
                                 ))}
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                <SelectItem value="unassigned" className="dark:text-slate-200 dark:focus:bg-zinc-800">Unassigned</SelectItem>
                             </SelectContent>
                         </Select>
 
                         <div className="relative w-full sm:w-80">
-                            <Search className="absolute top-3 left-3.5 size-4 text-slate-400" />
+                            <Search className="absolute top-3.5 left-3.5 size-4 text-slate-400 dark:text-slate-500" />
                             <Input
                                 placeholder="Search by student name..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="h-11 rounded-xl border-slate-200 bg-slate-50 pl-10 font-medium placeholder:text-slate-400 focus-visible:ring-blue-500"
+                                className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 pl-10 font-medium text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus-visible:ring-indigo-500 transition-colors"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* --- THE MATRIX TABLE & PAGINATION --- */}
-                <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-
-                    {/* 🚀 REMOVED: max-h and overflow-y-auto. The table now expands naturally based on rowsPerPage */}
-                    <div className="overflow-x-auto">
+                <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors">
+                    <div className="overflow-x-auto custom-scrollbar">
                         <Table className="w-full min-w-[950px] table-fixed">
-                            <TableHeader className="bg-slate-50/95 shadow-sm">
-                                <TableRow className="border-b border-slate-200 hover:bg-transparent">
-                                    <TableHead className="w-[30%] py-5 pl-6 text-xs font-bold tracking-widest text-slate-600 uppercase">
+                            <TableHeader className="bg-slate-50/95 dark:bg-zinc-950/50 shadow-sm transition-colors">
+                                <TableRow className="border-b border-slate-200 dark:border-slate-800 hover:bg-transparent transition-colors">
+                                    <TableHead className="w-[30%] py-5 pl-6 text-xs font-bold tracking-widest text-slate-600 dark:text-slate-400 uppercase">
                                         Learner Profile
                                     </TableHead>
-                                    <TableHead className="w-[23%] text-center text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                                    <TableHead className="w-[23%] text-center text-[10px] font-bold tracking-widest text-slate-600 dark:text-slate-400 uppercase">
                                         <div className="flex flex-col items-center justify-center gap-1">
-                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">1</span>
+                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-slate-300">1</span>
                                             First Evaluation
                                         </div>
                                     </TableHead>
-                                    <TableHead className="w-[23%] text-center text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                                    <TableHead className="w-[23%] text-center text-[10px] font-bold tracking-widest text-slate-600 dark:text-slate-400 uppercase">
                                         <div className="flex flex-col items-center justify-center gap-1">
-                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">2</span>
+                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-slate-300">2</span>
                                             Second Evaluation
                                         </div>
                                     </TableHead>
-                                    <TableHead className="w-[23%] pr-6 text-center text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                                    <TableHead className="w-[23%] pr-6 text-center text-[10px] font-bold tracking-widest text-slate-600 dark:text-slate-400 uppercase">
                                         <div className="flex flex-col items-center justify-center gap-1">
-                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">3</span>
+                                            <span className="flex size-6 items-center justify-center rounded-full bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-slate-300">3</span>
                                             Third Evaluation
                                         </div>
                                     </TableHead>
                                 </TableRow>
                             </TableHeader>
 
-                            <TableBody className="divide-y divide-slate-100">
+                            <TableBody className="divide-y divide-slate-100 dark:divide-slate-800 transition-colors">
                                 {paginatedData.length === 0 ? (
-                                    <TableRow>
-                                        {/* Adjusted height for empty state to look natural without fixed scrolling */}
+                                    <TableRow className="hover:bg-transparent">
                                         <TableCell colSpan={4} className="h-48 text-center py-12">
-                                            <div className="mx-auto flex max-w-sm flex-col items-center justify-center text-slate-400">
+                                            <div className="mx-auto flex max-w-sm flex-col items-center justify-center text-slate-400 dark:text-slate-600">
                                                 <Users className="mb-4 size-12 opacity-50" />
-                                                <p className="text-base font-medium text-slate-600">No learners found</p>
+                                                <p className="text-base font-medium text-slate-600 dark:text-slate-400">No learners found</p>
                                                 <p className="mt-1 text-sm">Try adjusting your search or session filter.</p>
                                             </div>
                                         </TableCell>
@@ -332,21 +317,21 @@ export default function AssessmentManagementPage() {
                                         const canStartThird = second?.status === 'Completed';
 
                                         return (
-                                            <TableRow key={row.studentId} className="group transition-colors hover:bg-slate-50/50">
+                                            <TableRow key={row.studentId} className="group transition-colors hover:bg-slate-50/50 dark:hover:bg-zinc-800/40">
                                                 <TableCell className="py-4 pl-6">
                                                     <div className="flex items-center gap-4">
-                                                        <Avatar className="size-11 border border-slate-200 bg-white shadow-sm transition-transform group-hover:scale-105">
-                                                            <AvatarFallback className="bg-indigo-50 text-sm font-bold text-indigo-700">
+                                                        <Avatar className="size-11 border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-950 shadow-sm transition-transform group-hover:scale-105 duration-300">
+                                                            <AvatarFallback className="bg-indigo-50 dark:bg-indigo-500/10 text-sm font-bold text-indigo-700 dark:text-indigo-400">
                                                                 {getInitials(row.firstName, row.lastName)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div className="flex flex-col justify-center">
-                                                            <span className="text-sm font-bold text-slate-900 truncate max-w-[200px] xl:max-w-[300px]">{row.name}</span>
+                                                            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] xl:max-w-[300px] transition-colors">{row.name}</span>
                                                             <div className="mt-1 flex items-center gap-2">
-                                                                <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-slate-600">
+                                                                <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-zinc-800 px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 transition-colors">
                                                                     {row.sessionName}
                                                                 </span>
-                                                                <span className="text-[11px] text-slate-400">{row.age} years old</span>
+                                                                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 transition-colors">{row.age} yrs</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -370,33 +355,33 @@ export default function AssessmentManagementPage() {
 
                     {/* Pagination Footer */}
                     {gradebookData.length > 0 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
+                        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 px-6 py-4 transition-colors">
                             <div className="flex items-center gap-3 mb-4 sm:mb-0">
-                                <span className="text-sm font-medium text-slate-500">Rows per page:</span>
+                                <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-[10px]">Rows:</span>
                                 <Select
                                     value={rowsPerPage.toString()}
                                     onValueChange={(val) => setRowsPerPage(Number(val))}
                                 >
-                                    <SelectTrigger className="h-8 w-[70px] bg-white text-xs font-semibold">
+                                    <SelectTrigger className="h-9 w-[75px] bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-xs font-bold transition-colors">
                                         <SelectValue placeholder="10" />
                                     </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="10">10</SelectItem>
-                                        <SelectItem value="25">25</SelectItem>
-                                        <SelectItem value="50">50</SelectItem>
+                                    <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                        <SelectItem value="10" className="dark:text-slate-200 dark:focus:bg-zinc-800">10</SelectItem>
+                                        <SelectItem value="25" className="dark:text-slate-200 dark:focus:bg-zinc-800">25</SelectItem>
+                                        <SelectItem value="50" className="dark:text-slate-200 dark:focus:bg-zinc-800">50</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
-                            <div className="flex items-center gap-4">
-                                <span className="text-sm font-medium text-slate-500">
-                                    Page <strong className="text-slate-900">{currentPage}</strong> of <strong className="text-slate-900">{totalPages}</strong>
+                            <div className="flex items-center gap-6">
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                    Page <strong className="text-slate-900 dark:text-white mx-1">{currentPage}</strong> of <strong className="text-slate-900 dark:text-white mx-1">{totalPages}</strong>
                                 </span>
                                 <div className="flex gap-2">
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="size-8"
+                                        className="size-9 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 transition-colors"
                                         disabled={currentPage === 1}
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     >
@@ -405,7 +390,7 @@ export default function AssessmentManagementPage() {
                                     <Button
                                         variant="outline"
                                         size="icon"
-                                        className="size-8"
+                                        className="size-9 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 transition-colors"
                                         disabled={currentPage === totalPages}
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     >

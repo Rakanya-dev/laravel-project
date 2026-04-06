@@ -323,23 +323,26 @@ export default function TeacherStudentsPage() {
     };
 
     const handleArchiveConfirm = () => {
-        const items =
-            selectedStudents.size > 0
-                ? Array.from(selectedStudents).map((id) => ({ id, status: archiveStatus }))
-                : [{ id: archivingStudent!.id, status: archiveStatus }];
+        if (selectedStudents.size > 0) {
+            // 🚀 BULK ARCHIVE
+            const items = Array.from(selectedStudents).map((id) => ({ id, status: archiveStatus }));
 
-        const endpoint = selectedStudents.size > 0 ? 'teacher.students.bulk-archive' : 'teacher.students.archive';
-        const payload = selectedStudents.size > 0 ? { items, reason: archiveReason } : { status: archiveStatus, reason: archiveReason };
-        const idParam = selectedStudents.size > 0 ? undefined : archivingStudent!.id;
-
-        // @ts-ignore
-        router.post(route(endpoint, idParam), payload, {
-            onSuccess: () => {
-                setIsArchiveDialogOpen(false);
-                setSelectedStudents(new Set());
-                toast.success('Archived');
-            },
-        });
+            router.post(route('teacher.students.bulk-archive'), { items, reason: archiveReason }, {
+                onSuccess: () => {
+                    setIsArchiveDialogOpen(false);
+                    setSelectedStudents(new Set());
+                    toast.success('Selected records archived');
+                },
+            });
+        } else if (archivingStudent) {
+            // 🚀 SINGLE ARCHIVE
+            router.post(route('teacher.students.archive', archivingStudent.id), { status: archiveStatus, reason: archiveReason }, {
+                onSuccess: () => {
+                    setIsArchiveDialogOpen(false);
+                    toast.success('Student archived');
+                },
+            });
+        }
     };
 
     const handleCreateAssessment = (payload: { student_id: number; assessment_type: string }[], domainIds: number[]) => {

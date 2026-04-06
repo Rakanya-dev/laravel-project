@@ -46,7 +46,6 @@ import { useMemo } from 'react';
 import { calculateAge, formatPHDate } from '@/utils/date';
 import { getAssessmentBadge, getEnrollmentBadge } from '@/utils/badges'; // 🚀 NEW
 
-
 export interface BaseStudent {
     id: number;
     firstName: string;
@@ -151,30 +150,28 @@ export function StudentListView<T extends BaseStudent>({
         if (filterStatus && filterStatus !== 'all') count++;
         if (role === 'admin' && filterDaycare && filterDaycare !== 'all') count++;
         if (role === 'teacher') {
-            // 🚀 FIX: Removed section tracking so the Filter badge doesn't light up for tabs
             if (filterAssessment && filterAssessment !== 'all') count++;
         }
         return count;
-    }, [role, filterStatus, filterDaycare, filterAssessment]); // Removed filterSection from dependency array
+    }, [role, filterStatus, filterDaycare, filterAssessment]);
 
     const title = role === 'admin' ? 'Child Records' : 'My Students';
     const subtitle = role === 'admin' ? 'Manage all children enrolled across daycare centers.' : 'Manage profiles, enrollment, and parent details.';
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-6 transition-colors duration-200">
             {/* Header */}
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
-                    {/* 🚀 RESPONSIVE TEXT: Scales from lg (mobile) up to 3xl (desktop) */}
-                    <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl md:text-2xl lg:text-3xl">{title}</h2>
-                    <p className="text-xs text-slate-500 sm:text-sm md:text-base">{subtitle}</p>
+                    <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl md:text-2xl lg:text-3xl transition-colors">{title}</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm md:text-base transition-colors">{subtitle}</p>
                 </div>
                 <div className="flex grid grid-cols-2 items-center gap-2 sm:flex">
-                    <Button variant="outline" className="h-9 w-full gap-2 border-dashed text-xs sm:w-auto md:text-sm" onClick={onOpenArchived}>
+                    <Button variant="outline" className="h-9 w-full gap-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:w-auto md:text-sm transition-colors" onClick={onOpenArchived}>
                         <Clock className="size-3.5 sm:size-4" /> <span className="truncate">View Archived</span>
                     </Button>
                     {role === 'admin' && onOpenImport && (
-                        <Button variant="outline" className="h-9 w-full gap-2 text-xs sm:w-auto md:text-sm" onClick={onOpenImport}>
+                        <Button variant="outline" className="h-9 w-full gap-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:w-auto md:text-sm transition-colors" onClick={onOpenImport}>
                             <Upload className="size-3.5 sm:size-4" /> <span className="truncate">Import CSV</span>
                         </Button>
                     )}
@@ -183,7 +180,7 @@ export function StudentListView<T extends BaseStudent>({
 
             {/* Bulk Actions Bar */}
             {selectedStudents.size > 0 && (
-                <div className="animate-in fade-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 shadow-sm transition-all sm:flex-row sm:items-center sm:py-2">
+                <div className="animate-in fade-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-amber-800 dark:text-amber-400 shadow-sm transition-all sm:flex-row sm:items-center sm:py-2">
                     <div className="flex items-center gap-2">
                         <CheckSquare className="size-4" />
                         <span className="text-xs font-medium sm:text-sm md:text-base">{selectedStudents.size} selected</span>
@@ -193,7 +190,7 @@ export function StudentListView<T extends BaseStudent>({
                             variant="ghost"
                             size="sm"
                             onClick={onCancelSelection}
-                            className="h-8 flex-1 text-xs text-amber-700 hover:bg-amber-100 hover:text-amber-900 sm:flex-none md:text-sm"
+                            className="h-8 flex-1 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none md:text-sm transition-colors"
                         >
                             <X className="mr-2 size-3" /> Cancel
                         </Button>
@@ -201,7 +198,7 @@ export function StudentListView<T extends BaseStudent>({
                             variant="outline"
                             size="sm"
                             onClick={onOpenBulkArchive}
-                            className="h-8 flex-1 border-amber-300 bg-white text-xs text-amber-700 hover:bg-amber-100 hover:text-amber-900 sm:flex-none md:text-sm"
+                            className="h-8 flex-1 border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none md:text-sm transition-colors"
                         >
                             <Archive className="mr-2 size-3" /> Archive Selected
                         </Button>
@@ -211,13 +208,13 @@ export function StudentListView<T extends BaseStudent>({
 
             {/* 🚀 NEW: Sleek Session Tabs for Teachers */}
             {role === 'teacher' && sectionList && onSectionChange && (
-                <div className="hide-scrollbar flex w-full overflow-x-auto border-b border-slate-200">
+                <div className="hide-scrollbar flex w-full overflow-x-auto border-b border-slate-200 dark:border-slate-800 transition-colors">
                     <button
                         onClick={() => {
                             onSectionChange('all');
                             onPageChange(1);
                         }}
-                        className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'all' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                        className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'all' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         All Students
                     </button>
@@ -228,7 +225,7 @@ export function StudentListView<T extends BaseStudent>({
                                 onSectionChange(sec);
                                 onPageChange(1);
                             }}
-                            className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === sec ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                            className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === sec ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
                         >
                             {sec}
                         </button>
@@ -238,7 +235,7 @@ export function StudentListView<T extends BaseStudent>({
                             onSectionChange('unassigned');
                             onPageChange(1);
                         }}
-                        className={`border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'unassigned' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                        className={`border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'unassigned' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Unassigned
                     </button>
@@ -246,17 +243,17 @@ export function StudentListView<T extends BaseStudent>({
             )}
 
             {/* Table Card */}
-            <Card className="gap-0! overflow-hidden border-slate-200 py-0! shadow-sm">
+            <Card className="gap-0! overflow-hidden border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 py-0! shadow-sm transition-colors">
                 {/* TOOLBAR */}
-                <div className="flex flex-col gap-3 border-b border-slate-100 bg-white p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between transition-colors">
                     <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
                         <div className="relative w-full sm:w-72">
-                            <Search className="absolute top-2.5 left-3 size-4 text-slate-400" />
+                            <Search className="absolute top-2.5 left-3 size-4 text-slate-400 dark:text-slate-500" />
                             <Input
                                 placeholder="Search by name..."
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="h-9 border-slate-200 bg-slate-50 pl-9 text-xs sm:text-sm md:text-base"
+                                className="h-9 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 dark:text-white dark:placeholder:text-slate-500 pl-9 text-xs sm:text-sm md:text-base transition-colors"
                             />
                         </div>
 
@@ -265,41 +262,41 @@ export function StudentListView<T extends BaseStudent>({
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="h-9 w-full border-dashed border-slate-300 bg-slate-50 text-xs text-slate-700 sm:w-auto sm:text-sm md:text-base"
+                                    className="h-9 w-full border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-zinc-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs sm:w-auto sm:text-sm md:text-base transition-colors"
                                 >
                                     <Filter className="mr-2 size-3.5 sm:size-4" /> Filters
                                     {activeFilterCount > 0 && (
                                         <>
-                                            <span className="mx-2 h-4 w-px bg-slate-200"></span>
+                                            <span className="mx-2 h-4 w-px bg-slate-200 dark:bg-slate-700"></span>
                                             <Badge
                                                 variant="secondary"
-                                                className="rounded-sm bg-blue-100 px-1.5 text-[10px] font-normal text-blue-700 hover:bg-blue-100 md:text-xs"
+                                                className="rounded-sm bg-blue-100 dark:bg-blue-500/20 px-1.5 text-[10px] font-normal text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 md:text-xs transition-colors"
                                             >
-                                                {activeFilterCount} active
+                                                {activeFilterCount} Active
                                             </Badge>
                                         </>
                                     )}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4" align="start">
+                            <PopoverContent className="w-80 p-4 dark:bg-zinc-900 dark:border-slate-800" align="start">
                                 <div className="space-y-4">
                                     <div>
-                                        <h4 className="mb-1 leading-none font-medium text-slate-900">Filter Records</h4>
-                                        <p className="text-sm text-slate-500">Narrow down your list.</p>
+                                        <h4 className="mb-1 leading-none font-medium text-slate-900 dark:text-white">Filter Records</h4>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Narrow down your list.</p>
                                     </div>
                                     <div className="space-y-4 pt-2">
                                         {/* Admin Only: Daycare Filter */}
                                         {role === 'admin' && onDaycareChange && daycareList && (
                                             <div className="space-y-2">
-                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 uppercase">Branch</Label>
+                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Branch</Label>
                                                 <Select value={filterDaycare} onValueChange={onDaycareChange}>
-                                                    <SelectTrigger className="w-full text-sm">
+                                                    <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
                                                         <SelectValue placeholder="All Branches" />
                                                     </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All Branches</SelectItem>
+                                                    <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                                        <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Branches</SelectItem>
                                                         {daycareList.map((d) => (
-                                                            <SelectItem key={d} value={d}>
+                                                            <SelectItem key={d} value={d} className="dark:text-slate-200 dark:focus:bg-zinc-800">
                                                                 {d}
                                                             </SelectItem>
                                                         ))}
@@ -310,16 +307,16 @@ export function StudentListView<T extends BaseStudent>({
 
                                         {/* Shared: Status Filter */}
                                         <div className="space-y-2">
-                                            <Label className="text-xs font-semibold tracking-wider text-slate-500 uppercase">Enrollment Status</Label>
+                                            <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Enrollment Status</Label>
                                             <Select value={filterStatus} onValueChange={onStatusChange}>
-                                                <SelectTrigger className="w-full text-sm">
+                                                <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
                                                     <SelectValue placeholder="All Statuses" />
                                                 </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All Statuses</SelectItem>
-                                                    <SelectItem value="Active">Active</SelectItem>
-                                                    <SelectItem value="Inactive">Inactive</SelectItem>
-                                                    {role === 'teacher' && <SelectItem value="Completed">Completed</SelectItem>}
+                                                <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                                    <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Statuses</SelectItem>
+                                                    <SelectItem value="Active" className="dark:text-slate-200 dark:focus:bg-zinc-800">Active</SelectItem>
+                                                    <SelectItem value="Inactive" className="dark:text-slate-200 dark:focus:bg-zinc-800">Inactive</SelectItem>
+                                                    {role === 'teacher' && <SelectItem value="Completed" className="dark:text-slate-200 dark:focus:bg-zinc-800">Completed</SelectItem>}
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -327,29 +324,29 @@ export function StudentListView<T extends BaseStudent>({
                                         {/* Teacher Only: Assessment Filter */}
                                         {role === 'teacher' && onAssessmentChange && (
                                             <div className="space-y-2">
-                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
                                                     Assessment Status
                                                 </Label>
                                                 <Select value={filterAssessment} onValueChange={onAssessmentChange}>
-                                                    <SelectTrigger className="w-full text-sm">
+                                                    <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
                                                         <SelectValue placeholder="All Assessments" />
                                                     </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All Assessments</SelectItem>
-                                                        <SelectItem value="Not Started">Not Started</SelectItem>
-                                                        <SelectItem value="Draft">Draft</SelectItem>
-                                                        <SelectItem value="In Progress">In Progress</SelectItem>
-                                                        <SelectItem value="Completed">Completed</SelectItem>
+                                                    <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                                        <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Assessments</SelectItem>
+                                                        <SelectItem value="Not Started" className="dark:text-slate-200 dark:focus:bg-zinc-800">Not Started</SelectItem>
+                                                        <SelectItem value="Draft" className="dark:text-slate-200 dark:focus:bg-zinc-800">Draft</SelectItem>
+                                                        <SelectItem value="In Progress" className="dark:text-slate-200 dark:focus:bg-zinc-800">In Progress</SelectItem>
+                                                        <SelectItem value="Completed" className="dark:text-slate-200 dark:focus:bg-zinc-800">Completed</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                         )}
                                     </div>
                                     {activeFilterCount > 0 && (
-                                        <div className="mt-4 border-t pt-2">
+                                        <div className="mt-4 border-t dark:border-slate-800 pt-2">
                                             <Button
                                                 variant="ghost"
-                                                className="w-full text-sm text-slate-500 hover:text-slate-900"
+                                                className="w-full text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-zinc-800"
                                                 onClick={onClearFilters}
                                             >
                                                 <X className="mr-2 size-4" /> Clear All Filters
@@ -368,26 +365,26 @@ export function StudentListView<T extends BaseStudent>({
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="h-9 flex-1 gap-1 bg-white px-2 text-xs sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base"
+                                        className="h-9 flex-1 gap-1 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-2 text-xs sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
                                     >
-                                        <FileText className="size-3.5 text-slate-500 sm:size-4" /> <span className="truncate">Reports</span>
+                                        <FileText className="size-3.5 text-slate-500 dark:text-slate-400 sm:size-4" /> <span className="truncate">Reports</span>
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuLabel>Reports</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={onConsolidatedReport}>
-                                        <FileSpreadsheet className="mr-2 size-4 text-green-600" /> Class Consolidated Record
+                                <DropdownMenuContent align="end" className="w-56 dark:bg-zinc-900 dark:border-slate-800">
+                                    <DropdownMenuLabel className="dark:text-slate-300">Reports</DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
+                                    <DropdownMenuItem onClick={onConsolidatedReport} className="dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">
+                                        <FileSpreadsheet className="mr-2 size-4 text-green-600 dark:text-green-500" /> Class Consolidated Record
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={onAnalysisReport}>
-                                        <BarChart3 className="mr-2 size-4 text-blue-600" /> Class Developmental Summary
+                                    <DropdownMenuItem onClick={onAnalysisReport} className="dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">
+                                        <BarChart3 className="mr-2 size-4 text-blue-600 dark:text-blue-500" /> Class Developmental Summary
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         ) : (
                             <Button
                                 variant="outline"
-                                className="h-9 flex-1 gap-2 bg-white text-xs sm:flex-none sm:text-sm md:text-base"
+                                className="h-9 flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:flex-none sm:text-sm md:text-base transition-colors"
                                 onClick={onExport}
                             >
                                 <Download className="mr-2 size-3.5 sm:size-4" /> <span className="truncate">Export</span>
@@ -396,14 +393,14 @@ export function StudentListView<T extends BaseStudent>({
 
                         {role === 'admin' && onOpenAdd ? (
                             <Button
-                                className="h-9 flex-1 gap-1 bg-indigo-600 px-2 text-xs text-white shadow-sm hover:bg-indigo-700 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base"
+                                className="h-9 flex-1 gap-1 bg-indigo-600 dark:bg-indigo-600 px-2 text-xs text-white shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-500 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
                                 onClick={onOpenAdd}
                             >
                                 <Plus className="size-3.5 sm:size-4" /> <span className="truncate">Add Student</span>
                             </Button>
                         ) : role === 'teacher' && onNewAssessment ? (
                             <Button
-                                className="h-9 flex-1 gap-1 bg-slate-900 px-2 text-xs text-white hover:bg-slate-800 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base"
+                                className="h-9 flex-1 gap-1 bg-slate-900 dark:bg-slate-100 px-2 text-xs text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
                                 onClick={() => onNewAssessment()}
                             >
                                 <Plus className="size-3.5 sm:size-4" /> <span className="truncate">New Assessment</span>
@@ -411,14 +408,12 @@ export function StudentListView<T extends BaseStudent>({
                         ) : null}
                     </div>
                 </div>
+
                 {/* --- TABLE CONTENT --- */}
-                {/* 🚀 FIX: Removed internal vertical scroll, added min-h-[680px] to lock the height for exactly 10 rows so pagination doesn't jump */}
                 <CardContent className="min-h-[530px] overflow-x-auto p-0">
-                    {' '}
                     <Table className="w-full min-w-[1050px] table-fixed">
-                        {/* 🚀 FIX: Removed sticky header classes since the table no longer scrolls internally */}
-                        <TableHeader className="border-b border-slate-200 bg-slate-50">
-                            <TableRow className="py-2 text-[10px] font-semibold tracking-wider text-slate-500 uppercase hover:bg-transparent sm:text-xs md:text-sm">
+                        <TableHeader className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-900/50 transition-colors">
+                            <TableRow className="py-2 text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase hover:bg-transparent dark:hover:bg-transparent sm:text-xs md:text-sm">
                                 <TableHead className="w-[4%] pl-4 align-middle sm:pl-6">
                                     <Checkbox
                                         checked={filteredStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
@@ -427,7 +422,6 @@ export function StudentListView<T extends BaseStudent>({
                                     />
                                 </TableHead>
 
-                                {/* Adjusted percentages to give Assessment/Enrollment more room */}
                                 <TableHead className={role === 'admin' ? 'w-[24%] align-middle' : 'w-[18%] align-middle'}>Name</TableHead>
 
                                 {role === 'teacher' && <TableHead className="w-[13%] align-middle">Session</TableHead>}
@@ -444,14 +438,12 @@ export function StudentListView<T extends BaseStudent>({
                                     Parent / Guardian
                                 </TableHead>
 
-                                {/* 🚀 FIX: Added pr-4 (padding right) to push Enrollment away from Assessment */}
                                 <TableHead className={role === 'admin' ? 'w-[16%] align-middle' : 'w-[12%] pr-4 align-middle leading-tight'}>
                                     Enrollment Status
                                 </TableHead>
 
                                 {role === 'teacher' && (
                                     <>
-                                        {/* 🚀 FIX: Added pl-2 (padding left) to push Assessment away from Enrollment */}
                                         <TableHead className="w-[14%] pl-2 align-middle leading-tight">Assessment Status</TableHead>
                                         <TableHead className="w-[10%] text-right align-middle leading-tight">Latest Score</TableHead>
                                     </>
@@ -463,8 +455,8 @@ export function StudentListView<T extends BaseStudent>({
 
                         <TableBody>
                             {paginatedStudents.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={role === 'admin' ? 7 : 9} className="h-48 text-center text-sm text-slate-500 md:text-base">
+                                <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                                    <TableCell colSpan={role === 'admin' ? 7 : 9} className="h-48 text-center text-sm text-slate-500 dark:text-slate-400 md:text-base">
                                         No student records found.
                                     </TableCell>
                                 </TableRow>
@@ -472,7 +464,7 @@ export function StudentListView<T extends BaseStudent>({
                                 paginatedStudents.map((student) => (
                                     <TableRow
                                         key={student.id}
-                                        className={`group transition-colors hover:bg-slate-50 ${selectedStudents.has(student.id) ? 'bg-indigo-50/40' : ''}`}
+                                        className={`group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50 ${selectedStudents.has(student.id) ? 'bg-indigo-50/40 dark:bg-indigo-500/10' : ''}`}
                                     >
                                         <TableCell className="py-2 pl-4 sm:py-3 sm:pl-6">
                                             <Checkbox
@@ -482,14 +474,12 @@ export function StudentListView<T extends BaseStudent>({
                                         </TableCell>
                                         <TableCell className="py-2 sm:py-3">
                                             <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
-                                                <Avatar className="size-6 shrink-0 border border-slate-200 sm:size-8">
-                                                    <AvatarFallback className="bg-slate-100 text-[10px] font-bold text-slate-700 sm:text-xs">
-                                                        {student.firstName.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
+                                                <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-sm shadow-inner shrink-0 transition-colors">
+                                                    {student.firstName?.[0] || student.firstName?.[0] || ''}{student.last_name?.[0] || student.lastName?.[0] || ''}
+                                                </div>
                                                 <button
                                                     onClick={() => onOpenDetail(student)}
-                                                    className="truncate text-left text-xs font-medium text-slate-900 hover:text-indigo-600 hover:underline sm:text-sm md:text-base"
+                                                    className="truncate text-left text-xs font-medium text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline sm:text-sm md:text-base transition-colors"
                                                 >
                                                     {formatName(student)}
                                                 </button>
@@ -499,24 +489,22 @@ export function StudentListView<T extends BaseStudent>({
                                         {role === 'teacher' && (
                                             <TableCell className="py-2 sm:py-3">
                                                 <div
-                                                    className="truncate text-xs font-medium text-slate-700 sm:text-sm md:text-base"
+                                                    className="truncate text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm md:text-base transition-colors"
                                                     title={student.section_name}
                                                 >
                                                     {student.section_name || (
-                                                        <span className="text-[10px] text-slate-400 italic sm:text-xs md:text-sm">Unassigned</span>
+                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 italic sm:text-xs md:text-sm">Unassigned</span>
                                                     )}
                                                 </div>
                                             </TableCell>
                                         )}
 
                                         {role === 'admin' ? (
-                                            <TableCell className="py-2 text-xs text-slate-600 sm:py-3 sm:text-sm md:text-base">
-                                                {/* 🚀 USES THE BULLETPROOF FORMATTER */}
+                                            <TableCell className="py-2 text-xs text-slate-600 dark:text-slate-300 sm:py-3 sm:text-sm md:text-base transition-colors">
                                                 {formatPHDate(student.dateOfBirth)}
                                             </TableCell>
                                         ) : (
-                                            <TableCell className="py-2 text-xs font-medium text-slate-600 sm:py-3 sm:text-sm md:text-base">
-                                                {/* 🚀 USES THE BULLETPROOF CALCULATOR */}
+                                            <TableCell className="py-2 text-xs font-medium text-slate-600 dark:text-slate-300 sm:py-3 sm:text-sm md:text-base transition-colors">
                                                 {calculateAge(student.dateOfBirth)} yrs
                                             </TableCell>
                                         )}
@@ -524,7 +512,7 @@ export function StudentListView<T extends BaseStudent>({
                                         {role === 'admin' && (
                                             <TableCell className="py-2 sm:py-3">
                                                 <div
-                                                    className="truncate text-xs font-medium text-indigo-600 sm:text-sm md:text-base"
+                                                    className="truncate text-xs font-medium text-indigo-600 dark:text-indigo-400 sm:text-sm md:text-base transition-colors"
                                                     title={student.daycare || '-'}
                                                 >
                                                     {student.daycare || '-'}
@@ -536,14 +524,14 @@ export function StudentListView<T extends BaseStudent>({
                                             {student.parentName || student.parentLinked ? (
                                                 <div className="flex flex-col">
                                                     <span
-                                                        className="truncate text-xs font-medium text-slate-900 sm:text-sm md:text-base"
+                                                        className="truncate text-xs font-medium text-slate-900 dark:text-slate-100 sm:text-sm md:text-base transition-colors"
                                                         title={student.parentName}
                                                     >
                                                         {student.parentName || 'Linked Parent'}
                                                     </span>
                                                     {student.parentEmail && (
                                                         <span
-                                                            className="truncate text-[10px] text-slate-500 sm:text-xs md:text-sm"
+                                                            className="truncate text-[10px] text-slate-500 dark:text-slate-400 sm:text-xs md:text-sm transition-colors"
                                                             title={student.parentEmail}
                                                         >
                                                             {student.parentEmail}
@@ -553,29 +541,27 @@ export function StudentListView<T extends BaseStudent>({
                                             ) : (
                                                 <Badge
                                                     variant="outline"
-                                                    className="w-fit border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 sm:px-2 sm:text-[11px] md:text-xs"
+                                                    className="w-fit border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800/50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:px-2 sm:text-[11px] md:text-xs transition-colors"
                                                 >
                                                     Unlinked
                                                 </Badge>
                                             )}
                                         </TableCell>
 
-                                        {/* Added right padding to push it away from Assessment */}
                                         <TableCell className={role === 'teacher' ? 'py-2 pr-4 sm:py-3' : 'py-2 sm:py-3'}>
                                             {getEnrollmentBadge(student.status)}
                                         </TableCell>
 
                                         {role === 'teacher' && (
                                             <>
-                                                {/* Added left padding to distance it from Enrollment */}
                                                 <TableCell className="py-2 pl-2 sm:py-3">{getAssessmentBadge(student.assessmentStatus)}</TableCell>
                                                 <TableCell className="py-2 text-right sm:py-3">
                                                     {student.score ? (
-                                                        <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700 sm:px-2.5 sm:text-sm md:text-base">
+                                                        <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-bold text-slate-700 dark:text-slate-300 sm:px-2.5 sm:text-sm md:text-base transition-colors">
                                                             {student.score}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-xs text-slate-400 sm:text-sm md:text-base">-</span>
+                                                        <span className="text-xs text-slate-400 dark:text-slate-500 sm:text-sm md:text-base transition-colors">-</span>
                                                     )}
                                                 </TableCell>
                                             </>
@@ -587,25 +573,24 @@ export function StudentListView<T extends BaseStudent>({
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="size-7 text-slate-400 hover:bg-slate-100 hover:text-slate-900 sm:size-8"
+                                                        className="size-7 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white sm:size-8 transition-colors"
                                                     >
                                                         <MoreHorizontal className="size-3.5 sm:size-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                                                <DropdownMenuContent align="end" className="w-48 dark:bg-zinc-900 dark:border-slate-800">
+                                                    <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
                                                         Manage Record
                                                     </DropdownMenuLabel>
-                                                    {/* 🚀 NEW: Admin Only - View PIN Button */}
                                                     {role === 'admin' && student.access_code && onViewPin && (
                                                         <DropdownMenuItem
                                                             onClick={() => onViewPin(student)}
-                                                            className="mb-1 cursor-pointer bg-indigo-50/50 font-medium text-indigo-600"
+                                                            className="mb-1 cursor-pointer bg-indigo-50/50 dark:bg-indigo-500/10 font-medium text-indigo-600 dark:text-indigo-400 dark:focus:bg-zinc-800 transition-colors"
                                                         >
                                                             <Key className="mr-2 size-4" /> View Parent PIN
                                                         </DropdownMenuItem>
                                                     )}
-                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
                                                     {role === 'teacher' &&
                                                         onNewAssessment &&
                                                         !(
@@ -613,40 +598,40 @@ export function StudentListView<T extends BaseStudent>({
                                                             student.status === 'Graduated' ||
                                                             student.canGraduate
                                                         ) && (
-                                                            <DropdownMenuItem onClick={() => onNewAssessment(student.id)}>
+                                                            <DropdownMenuItem onClick={() => onNewAssessment(student.id)} className="cursor-pointer dark:text-slate-200 dark:focus:bg-zinc-800">
                                                                 {student.assessmentStatus === 'Draft' ||
-                                                                student.assessmentStatus === 'In Progress' ? (
+                                                                    student.assessmentStatus === 'In Progress' ? (
                                                                     <>
-                                                                        <PlayCircle className="mr-2 size-4 text-amber-500" /> Resume Assessment
+                                                                        <PlayCircle className="mr-2 size-4 text-amber-500 dark:text-amber-400" /> Resume Assessment
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <PlusCircle className="mr-2 size-4" /> Start New Assessment
+                                                                        <PlusCircle className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> Start New Assessment
                                                                     </>
                                                                 )}
                                                             </DropdownMenuItem>
                                                         )}
 
-                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
 
-                                                    <DropdownMenuItem onClick={() => onOpenDetail(student)} className="cursor-pointer text-sm">
-                                                        <Eye className="mr-2 size-4 text-slate-500" /> View Profile
+                                                    <DropdownMenuItem onClick={() => onOpenDetail(student)} className="cursor-pointer text-sm dark:text-slate-200 dark:focus:bg-zinc-800">
+                                                        <Eye className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> View Profile
                                                     </DropdownMenuItem>
 
                                                     {role === 'teacher' && onProgressReport && (
                                                         <DropdownMenuItem
                                                             onClick={() => onProgressReport(student)}
-                                                            className="cursor-pointer text-sm text-blue-600"
+                                                            className="cursor-pointer text-sm text-blue-600 dark:text-blue-400 dark:focus:bg-zinc-800"
                                                         >
                                                             <Printer className="mr-2 size-4" /> Progress Report
                                                         </DropdownMenuItem>
                                                     )}
 
-                                                    <DropdownMenuItem onClick={() => onOpenEdit(student)} className="cursor-pointer text-sm">
-                                                        <Edit className="mr-2 size-4 text-slate-500" /> Edit Details
+                                                    <DropdownMenuItem onClick={() => onOpenEdit(student)} className="cursor-pointer text-sm dark:text-slate-200 dark:focus:bg-zinc-800">
+                                                        <Edit className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> Edit Details
                                                     </DropdownMenuItem>
 
-                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
 
                                                     {role === 'teacher' && onGraduate && (
                                                         <DropdownMenuItem
@@ -654,8 +639,8 @@ export function StudentListView<T extends BaseStudent>({
                                                             disabled={!student.canGraduate}
                                                             className={
                                                                 !student.canGraduate
-                                                                    ? 'cursor-not-allowed text-sm text-slate-400 opacity-60'
-                                                                    : 'cursor-pointer text-sm text-purple-600'
+                                                                    ? 'cursor-not-allowed text-sm text-slate-400 dark:text-slate-600 opacity-60'
+                                                                    : 'cursor-pointer text-sm text-purple-600 dark:text-purple-400 dark:focus:bg-zinc-800'
                                                             }
                                                         >
                                                             <GraduationCap className="mr-2 size-4" />
@@ -665,7 +650,7 @@ export function StudentListView<T extends BaseStudent>({
 
                                                     <DropdownMenuItem
                                                         onClick={() => onOpenArchive(student)}
-                                                        className="cursor-pointer text-sm text-amber-600"
+                                                        className="cursor-pointer text-sm text-amber-600 dark:text-amber-500 dark:focus:bg-zinc-800"
                                                     >
                                                         <Archive className="mr-2 size-4" /> Archive Record
                                                     </DropdownMenuItem>
@@ -681,11 +666,11 @@ export function StudentListView<T extends BaseStudent>({
 
                 {/* --- PAGINATION --- */}
                 {filteredStudents.length > 0 && (
-                    <div className="flex flex-col items-center justify-between gap-3 rounded-b-xl border-t bg-slate-50/50 p-3 sm:flex-row sm:px-6 sm:py-4">
-                        <div className="text-xs text-slate-500 sm:text-sm md:text-base">
-                            Showing <span className="font-medium text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                            <span className="font-medium text-slate-900">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
-                            <span className="font-medium text-slate-900">{filteredStudents.length}</span> records
+                    <div className="flex flex-col items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 p-3 sm:flex-row sm:px-6 sm:py-4 transition-colors">
+                        <div className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm md:text-base transition-colors">
+                            Showing <span className="font-medium text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                            <span className="font-medium text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
+                            <span className="font-medium text-slate-900 dark:text-white">{filteredStudents.length}</span> records
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
@@ -693,7 +678,7 @@ export function StudentListView<T extends BaseStudent>({
                                 size="sm"
                                 onClick={() => onPageChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className="h-8 border-slate-200 bg-white px-2 text-xs sm:px-3 md:text-sm"
+                                className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 px-2 text-xs sm:px-3 md:text-sm transition-colors"
                             >
                                 <ChevronLeft className="size-4" />
                             </Button>
@@ -702,7 +687,7 @@ export function StudentListView<T extends BaseStudent>({
                                 size="sm"
                                 onClick={() => onPageChange(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className="h-8 border-slate-200 bg-white px-2 text-xs sm:px-3 md:text-sm"
+                                className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 px-2 text-xs sm:px-3 md:text-sm transition-colors"
                             >
                                 <ChevronRight className="size-4" />
                             </Button>

@@ -131,31 +131,31 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
         <>
             {/* MAIN DATA DIALOG */}
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="flex max-h-[90vh] w-full flex-col overflow-hidden bg-slate-50 sm:max-w-[95vw] lg:max-w-[1400px] xl:max-w-[1536px]">
-                    <DialogHeader className="px-4 pt-4 pb-2 border-b border-slate-200 bg-white">
-                        <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-slate-800">
-                            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                <DialogContent className="flex max-h-[90vh] w-full flex-col overflow-hidden bg-slate-50 dark:bg-zinc-950 border-slate-200 dark:border-slate-800 sm:max-w-[95vw] lg:max-w-[1400px] xl:max-w-[1536px] transition-colors duration-200 p-0">
+                    <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 transition-colors">
+                        <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-slate-800 dark:text-white">
+                            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400">
                                 <BookOpen className="size-5" />
                             </div>
                             Past Learner Records
                         </DialogTitle>
-                        <DialogDescription className="text-base text-slate-500">
+                        <DialogDescription className="text-base text-slate-500 dark:text-slate-400">
                             Manage ECCD curriculum completers, transferred learners, and inactive center records.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex flex-1 flex-col overflow-hidden p-4">
-                        <div className="mb-4 flex flex-col xl:flex-row items-center justify-between gap-4 rounded-xl bg-white p-2 shadow-sm border border-slate-200">
+                    <div className="flex flex-1 flex-col overflow-hidden p-4 sm:p-6 bg-slate-50/50 dark:bg-zinc-950">
+                        <div className="mb-4 flex flex-col xl:flex-row items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900 p-2 shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
                             <Tabs
                                 value={activeTab}
                                 onValueChange={(v) => setActiveTab(v as 'completers' | 'withdrawn')}
                                 className="w-full xl:w-auto"
                             >
-                                <TabsList className="grid w-full grid-cols-2 xl:w-[450px] h-11 bg-slate-100">
-                                    <TabsTrigger value="completers" className="flex gap-2 font-medium text-sm data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm">
+                                <TabsList className="grid w-full grid-cols-2 xl:w-[450px] h-11 bg-slate-100 dark:bg-zinc-950 transition-colors">
+                                    <TabsTrigger value="completers" className="flex gap-2 font-medium text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-indigo-700 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-sm transition-colors">
                                         <Award className="size-4" /> ECCD Completers
                                     </TabsTrigger>
-                                    <TabsTrigger value="withdrawn" className="flex gap-2 font-medium text-sm data-[state=active]:bg-white data-[state=active]:text-slate-700 data-[state=active]:shadow-sm">
+                                    <TabsTrigger value="withdrawn" className="flex gap-2 font-medium text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 data-[state=active]:text-slate-700 dark:data-[state=active]:text-slate-200 text-slate-500 dark:text-slate-400 data-[state=active]:shadow-sm transition-colors">
                                         <FileOutput className="size-4" /> Transferred / Withdrawn
                                     </TabsTrigger>
                                 </TabsList>
@@ -163,8 +163,8 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
 
                             <div className="flex w-full flex-1 items-center justify-end gap-3 xl:w-auto overflow-x-auto">
                                 {selectedIds.size > 0 && (
-                                    <div className="animate-in fade-in slide-in-from-right-4 flex shrink-0 items-center gap-2 border-r border-slate-200 pr-3">
-                                        <span className="text-xs font-medium text-slate-500 mr-1">{selectedIds.size} selected</span>
+                                    <div className="animate-in fade-in slide-in-from-right-4 flex shrink-0 items-center gap-2 border-r border-slate-200 dark:border-slate-800 pr-3 transition-colors">
+                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">{selectedIds.size} selected</span>
                                         {activeTab === 'withdrawn' && (
                                             <Button
                                                 size="sm"
@@ -172,7 +172,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                     onBulkRestore(Array.from(selectedIds));
                                                     setSelectedIds(new Set());
                                                 }}
-                                                className="h-10 bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                                                className="h-10 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 shadow-sm transition-colors text-white"
                                             >
                                                 <RefreshCcw className="mr-2 size-4" /> Restore Active Status
                                             </Button>
@@ -183,7 +183,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                 size="sm"
                                                 variant="destructive"
                                                 onClick={() => setConfirmDelete({ type: 'bulk' })}
-                                                className="h-10 shadow-sm"
+                                                className="h-10 shadow-sm dark:bg-red-600 dark:hover:bg-red-500 transition-colors"
                                             >
                                                 <Trash2 className="size-4 lg:mr-2" /> <span className="hidden lg:inline">Delete Records</span>
                                             </Button>
@@ -194,13 +194,13 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                 {daycareList && daycareList.length > 0 && (
                                     <div className="w-full sm:w-48 shrink-0">
                                         <Select value={filterDaycare} onValueChange={setFilterDaycare}>
-                                            <SelectTrigger className="h-10 border-slate-200 bg-slate-50 focus:bg-white focus:ring-indigo-500">
+                                            <SelectTrigger className="h-10 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 focus:bg-white dark:focus:bg-zinc-900 focus:ring-indigo-500 dark:text-white transition-colors">
                                                 <SelectValue placeholder="All Centers" />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Centers</SelectItem>
+                                            <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
+                                                <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Centers</SelectItem>
                                                 {daycareList.map((daycare, idx) => (
-                                                    <SelectItem key={idx} value={daycare}>{daycare}</SelectItem>
+                                                    <SelectItem key={idx} value={daycare} className="dark:text-slate-200 dark:focus:bg-zinc-800">{daycare}</SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
@@ -208,54 +208,54 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                 )}
 
                                 <div className="relative w-full sm:max-w-xs shrink-0">
-                                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                     <Input
                                         placeholder="Search student or reason..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="h-10 border-slate-200 bg-slate-50 pl-9 focus:bg-white focus:ring-indigo-500"
+                                        className="h-10 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 pl-9 focus:bg-white dark:focus:bg-zinc-900 focus:ring-indigo-500 dark:text-white dark:placeholder:text-slate-500 transition-colors"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="h-[60vh] min-h-[450px] w-full overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="h-[60vh] min-h-[450px] w-full overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors">
                             <Table className="w-full text-sm">
-                                <TableHeader className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm shadow-sm">
-                                    <TableRow className="hover:bg-transparent">
+                                <TableHeader className="sticky top-0 z-10 bg-slate-50/90 dark:bg-zinc-900/90 backdrop-blur-sm shadow-sm transition-colors border-b border-slate-200 dark:border-slate-800">
+                                    <TableRow className="hover:bg-transparent dark:hover:bg-transparent border-none">
                                         <TableHead className="w-[40px] pl-4">
                                             <Checkbox
                                                 checked={paginatedData.length > 0 && selectedIds.size === paginatedData.length}
                                                 onCheckedChange={handleToggleAll}
-                                                className="border-slate-300"
+                                                className="border-slate-300 dark:border-slate-600"
                                             />
                                         </TableHead>
-                                        <TableHead className="font-bold text-slate-600">Child's Name</TableHead>
-                                        <TableHead className="font-bold text-slate-600">Age & Session</TableHead>
+                                        <TableHead className="font-bold text-slate-600 dark:text-slate-300">Child's Name</TableHead>
+                                        <TableHead className="font-bold text-slate-600 dark:text-slate-300">Age & Session</TableHead>
                                         {daycareList && daycareList.length > 0 && (
-                                            <TableHead className="font-bold text-slate-600">Assigned Center</TableHead>
+                                            <TableHead className="font-bold text-slate-600 dark:text-slate-300">Assigned Center</TableHead>
                                         )}
-                                        <TableHead className="font-bold text-slate-600">Status</TableHead>
-                                        <TableHead className="font-bold text-slate-600">Date Logged</TableHead>
-                                        <TableHead className="font-bold text-slate-600">Notes / Reason</TableHead>
-                                        <TableHead className="pr-4 text-right font-bold text-slate-600">Actions</TableHead>
+                                        <TableHead className="font-bold text-slate-600 dark:text-slate-300">Status</TableHead>
+                                        <TableHead className="font-bold text-slate-600 dark:text-slate-300">Date Logged</TableHead>
+                                        <TableHead className="font-bold text-slate-600 dark:text-slate-300">Notes / Reason</TableHead>
+                                        <TableHead className="pr-4 text-right font-bold text-slate-600 dark:text-slate-300">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
-                                <TableBody className="divide-y divide-slate-100">
+                                <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {paginatedData.length === 0 ? (
-                                        <TableRow className="hover:bg-transparent border-none">
+                                        <TableRow className="hover:bg-transparent dark:hover:bg-transparent border-none">
                                             <TableCell colSpan={daycareList && daycareList.length > 0 ? 8 : 7} className="h-[400px] text-center align-middle">
-                                                <div className="flex flex-col items-center justify-center text-slate-400">
+                                                <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                                                     {activeTab === 'completers' ? (
                                                         <>
                                                             <Award className="mb-3 size-12 opacity-20" />
-                                                            <p className="text-base font-medium text-slate-600">No ECCD completers yet.</p>
+                                                            <p className="text-base font-medium text-slate-600 dark:text-slate-400">No ECCD completers yet.</p>
                                                             <p className="text-sm">Students will appear here once they complete the curriculum.</p>
                                                         </>
                                                     ) : (
                                                         <>
                                                             <FileOutput className="mb-3 size-12 opacity-20" />
-                                                            <p className="text-base font-medium text-slate-600">No withdrawn records found.</p>
+                                                            <p className="text-base font-medium text-slate-600 dark:text-slate-400">No withdrawn records found.</p>
                                                             <p className="text-sm">Transferred or inactive students will be listed here.</p>
                                                         </>
                                                     )}
@@ -264,21 +264,21 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                         </TableRow>
                                     ) : (
                                         paginatedData.map((student) => (
-                                            <TableRow key={student.id} className={`group hover:bg-slate-50 ${selectedIds.has(student.id) ? 'bg-indigo-50/50 hover:bg-indigo-50/50' : ''}`}>
+                                            <TableRow key={student.id} className={`group hover:bg-slate-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedIds.has(student.id) ? 'bg-indigo-50/50 hover:bg-indigo-50/50 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/10' : ''}`}>
                                                 <TableCell className="pl-4">
                                                     <Checkbox
                                                         checked={selectedIds.has(student.id)}
                                                         onCheckedChange={() => handleToggleSelect(student.id)}
-                                                        className={selectedIds.has(student.id) ? "border-indigo-600 bg-indigo-600" : "border-slate-300"}
+                                                        className={selectedIds.has(student.id) ? "border-indigo-600 bg-indigo-600" : "border-slate-300 dark:border-slate-600"}
                                                     />
                                                 </TableCell>
 
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex size-9 items-center justify-center rounded-full bg-slate-100 font-semibold text-slate-600 shadow-inner shrink-0">
+                                                        <div className="flex size-9 items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 font-semibold text-slate-600 dark:text-slate-300 shadow-inner shrink-0 transition-colors">
                                                             {student.firstName[0]}{student.lastName[0]}
                                                         </div>
-                                                        <span className="font-semibold text-slate-900">
+                                                        <span className="font-semibold text-slate-900 dark:text-slate-100">
                                                             {student.firstName} {student.lastName}
                                                         </span>
                                                     </div>
@@ -286,8 +286,8 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
 
                                                 <TableCell>
                                                     <div className="flex flex-col gap-1">
-                                                        {student.age && <span className="text-sm font-medium text-slate-700">{student.age} yrs old</span>}
-                                                        <span className="text-xs text-slate-500 flex items-center gap-1">
+                                                        {student.age && <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{student.age} yrs old</span>}
+                                                        <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                                             <Users className="size-3" />
                                                             {student.section_name || 'Unassigned Session'}
                                                         </span>
@@ -295,7 +295,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                 </TableCell>
 
                                                 {daycareList && daycareList.length > 0 && (
-                                                    <TableCell className="text-sm font-semibold text-indigo-600">
+                                                    <TableCell className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
                                                         {student.daycare || '—'}
                                                     </TableCell>
                                                 )}
@@ -305,21 +305,21 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                         variant="outline"
                                                         className={
                                                             student.status === 'Graduated' || student.status === 'Completed'
-                                                                ? 'border-indigo-200 bg-indigo-50 text-indigo-700 font-bold uppercase tracking-wider text-[10px]'
+                                                                ? 'border-indigo-200 dark:border-indigo-500/20 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-bold uppercase tracking-wider text-[10px] transition-colors'
                                                                 : student.status === 'Transferred'
-                                                                    ? 'border-cyan-200 bg-cyan-50 text-cyan-700 font-bold uppercase tracking-wider text-[10px]'
-                                                                    : 'border-slate-200 bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[10px]'
+                                                                    ? 'border-cyan-200 dark:border-cyan-500/20 bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 font-bold uppercase tracking-wider text-[10px] transition-colors'
+                                                                    : 'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[10px] transition-colors'
                                                         }
                                                     >
                                                         {student.status === 'Graduated' || student.status === 'Completed' ? 'ECCD Completed' : student.status}
                                                     </Badge>
                                                 </TableCell>
 
-                                                <TableCell className="text-sm font-medium text-slate-600">
+                                                <TableCell className="text-sm font-medium text-slate-600 dark:text-slate-300">
                                                     {student.archivedDate || '—'}
                                                 </TableCell>
 
-                                                <TableCell className="max-w-[200px] truncate text-sm text-slate-500" title={student.archiveReason || ''}>
+                                                <TableCell className="max-w-[200px] truncate text-sm text-slate-500 dark:text-slate-400" title={student.archiveReason || ''}>
                                                     {student.archiveReason || '—'}
                                                 </TableCell>
 
@@ -329,7 +329,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                             variant="ghost"
                                                             size="icon"
                                                             onClick={() => onOpenDetail(student)}
-                                                            className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                                            className="text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors"
                                                             title="View Profile"
                                                         >
                                                             <Eye className="size-4" />
@@ -340,7 +340,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => onRestore(student)}
-                                                                className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                                                                className="border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-colors"
                                                             >
                                                                 <RefreshCcw className="mr-2 size-3" /> Restore
                                                             </Button>
@@ -349,7 +349,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handlePrintEccdChecklist(student)}
-                                                                className="border-indigo-200 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300"
+                                                                className="border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-colors"
                                                                 title="Print ECCD Progress Report"
                                                             >
                                                                 <Printer className="mr-2 size-3" /> Progress Report
@@ -361,7 +361,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => setConfirmDelete({ type: 'single', student })}
-                                                                className="text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                                                className="text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                                                                 title="Permanent Delete"
                                                             >
                                                                 <Trash2 className="size-4" />
@@ -378,10 +378,10 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
 
                         {filteredStudents.length > 0 && (
                             <div className="flex items-center justify-between pt-4">
-                                <div className="text-sm text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                                    Showing <span className="font-bold text-slate-700">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                                    <span className="font-bold text-slate-700">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
-                                    <span className="font-bold text-slate-700">{filteredStudents.length}</span> records
+                                <div className="text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-zinc-900/50 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors">
+                                    Showing <span className="font-bold text-slate-700 dark:text-slate-200">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">{filteredStudents.length}</span> records
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -389,11 +389,11 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                         size="sm"
                                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
-                                        className="h-9 w-9 p-0"
+                                        className="h-9 w-9 p-0 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
                                     >
                                         <ChevronLeft className="size-4" />
                                     </Button>
-                                    <div className="px-2 text-sm font-medium text-slate-600">
+                                    <div className="px-2 text-sm font-medium text-slate-600 dark:text-slate-400">
                                         Page {currentPage} of {totalPages}
                                     </div>
                                     <Button
@@ -401,7 +401,7 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                                         size="sm"
                                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
-                                        className="h-9 w-9 p-0"
+                                        className="h-9 w-9 p-0 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
                                     >
                                         <ChevronRight className="size-4" />
                                     </Button>
@@ -412,19 +412,19 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                 </DialogContent>
             </Dialog>
 
-            {/* SECONADRY DELETE CONFIRMATION DIALOG */}
+            {/* SECONDARY DELETE CONFIRMATION DIALOG */}
             <Dialog open={!!confirmDelete} onOpenChange={(isOpen) => !isOpen && setConfirmDelete(null)}>
-                <DialogContent className="max-w-sm rounded-2xl p-6 text-center shadow-2xl">
+                <DialogContent className="max-w-sm rounded-2xl p-6 text-center shadow-2xl bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 transition-colors duration-200">
                     <DialogHeader>
-                        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-red-100 ring-4 ring-white shadow-sm mb-4">
-                            <Trash2 className="size-6 text-red-600" />
+                        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/10 ring-4 ring-white dark:ring-zinc-950 shadow-sm mb-4 transition-colors">
+                            <Trash2 className="size-6 text-red-600 dark:text-red-400" />
                         </div>
-                        <DialogTitle className="text-xl font-bold text-slate-900 tracking-tight text-center">
+                        <DialogTitle className="text-xl font-bold text-slate-900 dark:text-white tracking-tight text-center transition-colors">
                             {confirmDelete?.type === 'single'
                                 ? `Delete ${confirmDelete.student?.firstName}?`
                                 : `Delete ${selectedIds.size} records?`}
                         </DialogTitle>
-                        <DialogDescription className="text-center text-sm text-slate-500 mt-2">
+                        <DialogDescription className="text-center text-sm text-slate-500 dark:text-slate-400 mt-2 transition-colors">
                             This action is permanent and cannot be undone. This will completely erase the student's records from the database.
                         </DialogDescription>
                     </DialogHeader>
@@ -432,14 +432,14 @@ export function ArchivedStudentsDialog<T extends BaseStudent>({
                     <div className="flex flex-col sm:flex-row justify-center gap-3 mt-4">
                         <Button
                             variant="outline"
-                            className="w-full sm:w-auto h-11"
+                            className="w-full sm:w-auto h-11 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
                             onClick={() => setConfirmDelete(null)}
                         >
                             Cancel
                         </Button>
                         <Button
                             variant="destructive"
-                            className="w-full sm:w-auto h-11 bg-red-600 hover:bg-red-700"
+                            className="w-full sm:w-auto h-11 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 transition-colors text-white"
                             onClick={executeDelete}
                         >
                             Yes, delete
