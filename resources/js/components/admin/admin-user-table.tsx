@@ -64,22 +64,18 @@ export default function AdminUsersTable({
     };
 
     const getDaycareName = (user: User) => {
-        // 1. Is it the new clean string from our Laravel Accessor?
         if (typeof user.daycare === 'string') {
-            // If the backend sent 'Unassigned', let's make it look nice
             if (user.daycare === 'Unassigned') {
-                return <span className="text-slate-400 italic">Unassigned</span>;
+                return <span className="text-slate-400 dark:text-slate-500 italic">Unassigned</span>;
             }
             return user.daycare;
         }
 
-        // 2. Just in case it comes through as the old object format
         if (user.daycare && typeof user.daycare === 'object' && 'name' in user.daycare) {
             return user.daycare.name;
         }
 
-        // 3. The absolute fallback
-        return <span className="text-slate-400 italic">Unassigned</span>;
+        return <span className="text-slate-400 dark:text-slate-500 italic">Unassigned</span>;
     };
 
     const formatDisplayPhone = (phone?: string) => {
@@ -90,7 +86,6 @@ export default function AdminUsersTable({
         else if (clean.startsWith('0')) clean = clean.substring(1);
 
         if (clean.length >= 10) {
-            // 🚀 Changed to 63+
             return `+63 ${clean.slice(0, 3)} ${clean.slice(3, 6)} ${clean.slice(6, 10)}`;
         }
         return phone;
@@ -99,11 +94,11 @@ export default function AdminUsersTable({
     const getStatusBadge = (status: string) => {
         const s = status?.toLowerCase() || 'unknown';
         switch (s) {
-            case 'pending': return <Badge className="border-amber-200 bg-amber-50 text-amber-700 uppercase tracking-widest text-[10px] font-bold">Pending</Badge>;
-            case 'active': return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 uppercase tracking-widest text-[10px] font-bold">Active</Badge>;
+            case 'pending': return <Badge className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-500/10 dark:text-amber-400 uppercase tracking-widest text-[10px] font-bold">Pending</Badge>;
+            case 'active': return <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-500/10 dark:text-emerald-400 uppercase tracking-widest text-[10px] font-bold">Active</Badge>;
             case 'rejected':
-            case 'inactive': return <Badge className="border-red-200 bg-red-50 text-red-700 uppercase tracking-widest text-[10px] font-bold">{status}</Badge>;
-            default: return <Badge className="border-slate-200 bg-slate-50 text-slate-700 uppercase tracking-widest text-[10px] font-bold">{status}</Badge>;
+            case 'inactive': return <Badge className="border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-500/10 dark:text-red-400 uppercase tracking-widest text-[10px] font-bold">{status}</Badge>;
+            default: return <Badge className="border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-zinc-800 dark:text-slate-300 uppercase tracking-widest text-[10px] font-bold">{status}</Badge>;
         }
     };
 
@@ -116,18 +111,18 @@ export default function AdminUsersTable({
     };
 
     return (
-        <div className="space-y-4 p-4 sm:p-6">
+        <div className="space-y-4 p-4 sm:p-6 transition-colors duration-200">
             <div className="flex flex-col xl:flex-row items-center gap-3">
                 <div className="relative flex-1 w-full">
-                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                     <Input
                         placeholder="Search entire database by name or email..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-11 rounded-xl bg-slate-50 border-slate-200 focus-visible:ring-indigo-500 w-full"
+                        className="pl-10 h-11 rounded-xl bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-slate-800 focus-visible:ring-indigo-500 dark:text-white dark:placeholder:text-slate-500 w-full transition-colors"
                     />
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <button onClick={() => setSearchQuery('')} className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
                             <XCircle className="size-4" />
                         </button>
                     )}
@@ -135,10 +130,10 @@ export default function AdminUsersTable({
 
                 <div className="flex w-full xl:w-auto items-center gap-2 overflow-x-auto pb-2 xl:pb-0">
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
-                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 min-w-[140px]">
+                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-slate-800 min-w-[140px] dark:text-slate-200 transition-colors">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
                             <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="Pending">Pending</SelectItem>
                             <SelectItem value="Active">Active</SelectItem>
@@ -147,10 +142,10 @@ export default function AdminUsersTable({
                     </Select>
 
                     <Select value={filterDaycare} onValueChange={setFilterDaycare}>
-                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 min-w-[180px] max-w-[250px]">
+                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-slate-800 min-w-[180px] max-w-[250px] dark:text-slate-200 transition-colors">
                             <SelectValue placeholder="Daycare Center" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
                             <SelectItem value="all">All Centers</SelectItem>
                             {daycareList.map((daycare: any, index) => {
                                 const dcName = typeof daycare === 'string' ? daycare : daycare.name;
@@ -160,74 +155,73 @@ export default function AdminUsersTable({
                     </Select>
 
                     {isFiltering && (
-                        <Button variant="ghost" onClick={clearFilters} className="h-11 px-3 text-slate-500 hover:text-red-600 rounded-xl">
+                        <Button variant="ghost" onClick={clearFilters} className="h-11 px-3 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 rounded-xl">
                             Clear
                         </Button>
                     )}
 
-                    <div className="h-8 w-px bg-slate-200 mx-1 hidden xl:block"></div>
+                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden xl:block"></div>
 
-                    <Button variant="outline" className="gap-2 h-11 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0" onClick={onExport}>
+                    <Button variant="outline" className="gap-2 h-11 rounded-xl border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 shrink-0 transition-colors" onClick={onExport}>
                         <Download className="size-4" />
                         Export
                     </Button>
                 </div>
             </div>
 
-            <div className="px-1 text-sm font-medium text-slate-500">
+            <div className="px-1 text-sm font-medium text-slate-500 dark:text-slate-400">
                 {isFiltering
                     ? `Found ${pagination?.total || 0} matching records in database.`
                     : `Showing ${pagination?.from || 0} to ${pagination?.to || 0} of ${pagination?.total || 0} total records.`
                 }
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm min-h-[500px] flex flex-col">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm min-h-[500px] flex flex-col transition-colors duration-200">
                 <div className="overflow-x-auto flex-1">
                     <Table className="min-w-[900px] table-fixed">
-                        <TableHeader className="bg-slate-50 border-b border-slate-100">
-                            <TableRow>
-                                <TableHead className="w-[30%] py-4 pl-6 text-xs font-bold uppercase tracking-widest text-slate-500">Profile</TableHead>
-                                <TableHead className="w-[30%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Contact Details</TableHead>
-                                <TableHead className="w-[20%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Center Assignment</TableHead>
-                                <TableHead className="w-[15%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
+                        <TableHeader className="bg-slate-50 dark:bg-zinc-900/50 border-b border-slate-100 dark:border-slate-800">
+                            <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+                                <TableHead className="w-[30%] py-4 pl-6 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Profile</TableHead>
+                                <TableHead className="w-[30%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Contact Details</TableHead>
+                                <TableHead className="w-[20%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Center Assignment</TableHead>
+                                <TableHead className="w-[15%] py-4 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</TableHead>
                                 <TableHead className="w-[5%] pr-6"></TableHead>
                             </TableRow>
                         </TableHeader>
-                        <TableBody className="divide-y divide-slate-100">
+                        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {users.length === 0 ? (
-                                <TableRow>
+                                <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
                                     <TableCell colSpan={5} className="py-24 text-center">
-                                        <div className="flex flex-col items-center justify-center text-slate-400">
+                                        <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                                             <ShieldAlert className="mb-3 size-10 opacity-20" />
-                                            <p className="text-base font-bold text-slate-600">No records found</p>
-                                            <Button variant="link" onClick={clearFilters} className="mt-1 text-indigo-600">Clear all filters</Button>
+                                            <p className="text-base font-bold text-slate-600 dark:text-slate-300">No records found</p>
+                                            <Button variant="link" onClick={clearFilters} className="mt-1 text-indigo-600 dark:text-indigo-400">Clear all filters</Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 users.map((user) => (
-                                    <TableRow key={user.id} className="group h-16 hover:bg-slate-50/50 transition-colors">
+                                    <TableRow key={user.id} className="group h-16 hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                                         <td className="py-3 pl-6 truncate pr-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm shadow-inner shrink-0">
+                                                <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-sm shadow-inner shrink-0">
                                                     {user.first_name?.[0] || user.firstName?.[0] || ''}{user.last_name?.[0] || user.lastName?.[0] || ''}
                                                 </div>
                                                 <div className="flex flex-col overflow-hidden">
-                                                    <span className="font-bold text-slate-900 truncate">{getFullName(user)}</span>
-                                                    <span className="text-xs font-medium text-slate-500 capitalize">{userType === 'teachers' ? 'CDW / Teacher' : 'Parent / Guardian'}</span>
+                                                    <span className="font-bold text-slate-900 dark:text-slate-100 truncate">{getFullName(user)}</span>
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 capitalize">{userType === 'teachers' ? 'CDW / Teacher' : 'Parent / Guardian'}</span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="py-3 truncate pr-4">
-                                            <div className="flex flex-col gap-1 text-xs text-slate-600 font-medium">
-                                                <div className="flex items-center gap-2 truncate"><Mail className="size-3.5 text-slate-400 shrink-0" /> <span className="truncate">{user.email}</span></div>
-                                                {/* 🚀 APPLIED FORMATTER RIGHT HERE */}
-                                                <div className="flex items-center gap-2"><Phone className="size-3.5 text-slate-400 shrink-0" /> {formatDisplayPhone(user.phone)}</div>
+                                            <div className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                                <div className="flex items-center gap-2 truncate"><Mail className="size-3.5 text-slate-400 dark:text-slate-500 shrink-0" /> <span className="truncate">{user.email}</span></div>
+                                                <div className="flex items-center gap-2"><Phone className="size-3.5 text-slate-400 dark:text-slate-500 shrink-0" /> {formatDisplayPhone(user.phone)}</div>
                                             </div>
                                         </td>
                                         <td className="py-3 truncate pr-4">
-                                            <div className="flex items-center gap-2 text-sm font-bold text-slate-700 truncate">
-                                                <School className="size-4 text-indigo-400 shrink-0" />
+                                            <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+                                                <School className="size-4 text-indigo-400 dark:text-indigo-500 shrink-0" />
                                                 <span className="truncate">{getDaycareName(user)}</span>
                                             </div>
                                         </td>
@@ -235,19 +229,19 @@ export default function AdminUsersTable({
                                         <td className="py-3 pr-6 text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700"><MoreVertical className="size-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-zinc-800"><MoreVertical className="size-4" /></Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                                <DropdownMenuContent align="end" className="w-48 rounded-xl dark:bg-zinc-900 dark:border-slate-800">
                                                     {userType === 'parents' && user.status?.toLowerCase() === 'pending' && (
                                                         <>
-                                                            <DropdownMenuItem onClick={() => onApprove?.(user.id)} className="cursor-pointer font-medium text-emerald-600 focus:text-emerald-700"><Check className="mr-2 size-4" /> Approve Account</DropdownMenuItem>
-                                                            <DropdownMenuItem onClick={() => onReject?.(user.id)} className="cursor-pointer font-medium text-red-600 focus:text-red-700"><X className="mr-2 size-4" /> Reject Account</DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={() => onApprove?.(user.id)} className="cursor-pointer font-medium text-emerald-600 dark:text-emerald-400 focus:text-emerald-700 dark:focus:text-emerald-300 dark:focus:bg-zinc-800"><Check className="mr-2 size-4" /> Approve Account</DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => onReject?.(user.id)} className="cursor-pointer font-medium text-red-600 dark:text-red-400 focus:text-red-700 dark:focus:text-red-300 dark:focus:bg-zinc-800"><X className="mr-2 size-4" /> Reject Account</DropdownMenuItem>
+                                                            <DropdownMenuSeparator className="dark:bg-slate-800" />
                                                         </>
                                                     )}
-                                                    <DropdownMenuItem onClick={() => onEdit?.(user)} className="cursor-pointer font-medium"><Edit className="mr-2 size-4 text-slate-400" /> Edit Details</DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => onDelete?.(user.id)} className="cursor-pointer font-medium text-red-600 focus:bg-red-50 focus:text-red-700"><Trash2 className="mr-2 size-4" /> Delete Account</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => onEdit?.(user)} className="cursor-pointer font-medium dark:text-slate-200 dark:focus:bg-zinc-800"><Edit className="mr-2 size-4 text-slate-400 dark:text-slate-500" /> Edit Details</DropdownMenuItem>
+                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
+                                                    <DropdownMenuItem onClick={() => onDelete?.(user.id)} className="cursor-pointer font-medium text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-500/10 focus:text-red-700 dark:focus:text-red-300"><Trash2 className="mr-2 size-4" /> Delete Account</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </td>

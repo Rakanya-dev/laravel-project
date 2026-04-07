@@ -39,7 +39,6 @@ export interface Student {
     gender: string;
     special_needs: string;
     notes: string;
-    // 🚀 FIX: Tell TypeScript to expect these new fields
     age?: number | string;
     section_name?: string;
     [key: string]: any;
@@ -123,7 +122,6 @@ export default function StudentManagement() {
             special_needs: student.special_needs || '',
             notes: student.notes || '',
             access_code: student.access_code,
-            // 🚀 FIX: Properly map the Age and Session Name so the Archive Dialog can display them!
             age: student.date_of_birth ? calculateAge(student.date_of_birth) : '-',
             section_name: student.section?.name || 'Unassigned',
         };
@@ -167,12 +165,11 @@ export default function StudentManagement() {
     const [allStudents, setAllStudents] = useState<Student[]>(() => rawStudents.map(transformStudent));
     const [pendingList, setPendingList] = useState<PendingEnrollment[]>(rawPending || []);
     const [activeTab, setActiveTab] = useState('roster');
+
     useEffect(() => {
-        // Read the URL parameters
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
 
-        // If the URL has ?tab=pending, switch the tab automatically
         if (tabParam === 'pending') {
             setActiveTab('pending');
         } else if (tabParam === 'roster') {
@@ -386,18 +383,14 @@ export default function StudentManagement() {
     };
 
     const handlePermanentDelete = async (student: Student) => {
-        // ❌ REMOVED: if (!confirm(...)) return;
-
-        // 1. Optimistically update the UI so it feels instant
         setAllStudents((prev) => prev.filter((s) => s.id !== student.id));
         toast.success('Child record permanently deleted');
 
-        // 2. Send the request to the database
         router.delete(route('admin.students.permanent-delete', student.id), {
             preserveScroll: true,
             onError: () => {
                 toast.error('Failed to delete.');
-                router.reload(); // Reverts the UI if the database fails
+                router.reload();
             },
         });
     };
@@ -405,13 +398,9 @@ export default function StudentManagement() {
     const handleBulkPermanentDelete = async (idsToDelete: number[]) => {
         if (idsToDelete.length === 0) return;
 
-        // ❌ REMOVED: if (!confirm(...)) return;
-
-        // 1. Optimistically update the UI
         setAllStudents((prev) => prev.filter((s) => !idsToDelete.includes(s.id)));
         toast.success(`${idsToDelete.length} record(s) permanently deleted`);
 
-        // 2. Send the request to the database
         router.post(
             route('admin.students.bulk-permanent-delete'),
             { ids: idsToDelete },
@@ -419,7 +408,7 @@ export default function StudentManagement() {
                 preserveScroll: true,
                 onError: () => {
                     toast.error('Bulk delete failed.');
-                    router.reload(); // Reverts the UI if the database fails
+                    router.reload();
                 },
             },
         );
@@ -602,15 +591,12 @@ export default function StudentManagement() {
         toast.success('Filters cleared');
     };
 
-    // 1. Grab the flash data from Inertia
     const { flash } = usePage().props as any;
 
-    // 2. Setup state for the PIN Reveal Modal
     const [pinModalOpen, setPinModalOpen] = useState(false);
     const [pinData, setPinData] = useState({ name: '', code: '' });
     const [copied, setCopied] = useState(false);
 
-    // 3. Listen for the PIN arriving from the Backend
     useEffect(() => {
         if (flash?.new_access_code) {
             setPinData({
@@ -638,14 +624,14 @@ export default function StudentManagement() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Student Management" />
-            <div className="p-4 sm:p-6 lg:p-8">
+            <div className="p-4 sm:p-6 lg:p-8 transition-colors duration-200">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <div className="mb-6 flex items-center justify-between">
-                        <TabsList className="grid w-[400px] grid-cols-2">
-                            <TabsTrigger value="roster">
+                        <TabsList className="grid w-[400px] grid-cols-2 dark:bg-zinc-900 transition-colors">
+                            <TabsTrigger value="roster" className="dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white">
                                 <UserCheck className="mr-2 h-4 w-4" /> Active Roster
                             </TabsTrigger>
-                            <TabsTrigger value="pending" className="relative">
+                            <TabsTrigger value="pending" className="relative dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white">
                                 <FileText className="mr-2 h-4 w-4" /> Pending Enrollments
                                 {pendingList.length > 0 && (
                                     <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
@@ -690,22 +676,22 @@ export default function StudentManagement() {
                     </TabsContent>
 
                     <TabsContent value="pending" className="mt-0 border-none p-0 outline-none">
-                        <div className="rounded-xl border border-neutral-200 bg-white shadow-sm">
+                        <div className="rounded-xl border border-neutral-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors">
                             <div className="p-6">
-                                <h2 className="text-lg font-bold text-neutral-900">Applications Awaiting Review</h2>
-                                <p className="mb-6 text-sm text-neutral-500">
+                                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Applications Awaiting Review</h2>
+                                <p className="mb-6 text-sm text-neutral-500 dark:text-slate-400">
                                     Verify parent documents and assign students to their specific Daycare Sections.
                                 </p>
                                 {pendingList.length === 0 ? (
-                                    <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-200 bg-neutral-50">
-                                        <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-400" />
-                                        <span className="font-medium text-neutral-600">All caught up!</span>
-                                        <p className="text-sm text-neutral-500">No pending enrollments right now.</p>
+                                    <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-200 dark:border-slate-800 bg-neutral-50 dark:bg-zinc-950 transition-colors">
+                                        <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-400 dark:text-emerald-500" />
+                                        <span className="font-medium text-neutral-600 dark:text-slate-300">All caught up!</span>
+                                        <p className="text-sm text-neutral-500 dark:text-slate-500">No pending enrollments right now.</p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm text-neutral-600">
-                                            <thead className="border-b border-neutral-200 bg-neutral-50 text-xs text-neutral-500 uppercase">
+                                        <table className="w-full text-left text-sm text-neutral-600 dark:text-slate-300">
+                                            <thead className="border-b border-neutral-200 dark:border-slate-800 bg-neutral-50 dark:bg-zinc-900/50 text-xs text-neutral-500 dark:text-slate-400 uppercase transition-colors">
                                                 <tr>
                                                     <th className="px-6 py-3 font-semibold">Child Name</th>
                                                     <th className="px-6 py-3 font-semibold">Age</th>
@@ -714,23 +700,23 @@ export default function StudentManagement() {
                                                     <th className="px-6 py-3 text-right font-semibold">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-neutral-100 bg-white">
+                                            <tbody className="divide-y divide-neutral-100 dark:divide-slate-800 bg-white dark:bg-zinc-900 transition-colors">
                                                 {pendingList.map((enrollment) => (
-                                                    <tr key={enrollment.id} className="hover:bg-neutral-50/50">
-                                                        <td className="px-6 py-4 font-medium text-neutral-900">
+                                                    <tr key={enrollment.id} className="hover:bg-neutral-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                        <td className="px-6 py-4 font-medium text-neutral-900 dark:text-white">
                                                             {enrollment.last_name}, {enrollment.first_name}
                                                         </td>
                                                         <td className="px-6 py-4">{calculateAge(enrollment.date_of_birth)} yrs</td>
-                                                        <td className="px-6 py-4 font-medium text-indigo-600">{enrollment.daycare.name}</td>
+                                                        <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400">{enrollment.daycare.name}</td>
                                                         <td className="px-6 py-4">
                                                             {enrollment.user.first_name} {enrollment.user.last_name}
-                                                            <div className="text-xs text-neutral-400">{enrollment.user.email}</div>
+                                                            <div className="text-xs text-neutral-400 dark:text-slate-500">{enrollment.user.email}</div>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
                                                             <Button
                                                                 onClick={() => openReviewModal(enrollment)}
                                                                 size="sm"
-                                                                className="bg-indigo-600 hover:bg-indigo-700"
+                                                                className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white transition-colors"
                                                             >
                                                                 <Eye className="mr-2 h-4 w-4" /> Review Docs
                                                             </Button>
@@ -747,16 +733,16 @@ export default function StudentManagement() {
                 </Tabs>
 
                 <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                    <DialogContent className="max-h-[95vh] sm:max-w-[900px] p-0 overflow-hidden bg-slate-50 border-none shadow-2xl rounded-2xl">
+                    <DialogContent className="max-h-[95vh] sm:max-w-[900px] p-0 overflow-hidden bg-slate-50 dark:bg-zinc-950 border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200">
                         {/* --- HEADER --- */}
-                        <div className="bg-white border-b border-slate-100 p-6 shadow-sm relative z-10">
+                        <div className="bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 p-6 shadow-sm relative z-10 transition-colors">
                             <div className="flex items-center gap-4">
-                                <div className="flex size-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm">
+                                <div className="flex size-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/30 shadow-sm transition-colors">
                                     <FileText className="size-7" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">Review Application</DialogTitle>
-                                    <DialogDescription className="text-slate-500 font-medium">
+                                    <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">Review Application</DialogTitle>
+                                    <DialogDescription className="text-slate-500 dark:text-slate-400 font-medium transition-colors">
                                         Verification of documents and classroom placement.
                                     </DialogDescription>
                                 </div>
@@ -764,24 +750,24 @@ export default function StudentManagement() {
                         </div>
 
                         {reviewingEnrollment && (
-                            <div className="overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-thin">
+                            <div className="overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-thin dark:scrollbar-thumb-zinc-700 transition-colors">
                                 <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                                     {/* LEFT SIDE: Document Previews (7 columns) */}
                                     <div className="lg:col-span-7 space-y-6">
-                                        <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                                        <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2 transition-colors">
                                             <Eye className="size-3" /> Submitted Proofs
                                         </h4>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {/* Birth Certificate */}
-                                            <div className="group relative rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md">
-                                                <p className="mb-2 text-xs font-bold text-slate-700">PSA Birth Certificate</p>
+                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
+                                                <p className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors">PSA Birth Certificate</p>
                                                 <a
                                                     href={getSecureUrl(reviewingEnrollment.birth_cert_path)}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 border border-slate-100"
+                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
                                                 >
                                                     <img
                                                         src={getSecureUrl(reviewingEnrollment.birth_cert_path)}
@@ -790,23 +776,23 @@ export default function StudentManagement() {
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).style.display = 'none';
                                                             e.currentTarget.parentElement!.innerHTML =
-                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 text-indigo-600 gap-2"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
+                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-2 transition-colors"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
                                                         }}
                                                     />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                                        <div className="bg-white/90 opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-opacity uppercase tracking-wider">Expand Document</div>
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                        <div className="bg-white/90 dark:bg-zinc-900/90 dark:text-white opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-all uppercase tracking-wider">Expand Document</div>
                                                     </div>
                                                 </a>
                                             </div>
 
                                             {/* Parent ID */}
-                                            <div className="group relative rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md">
-                                                <p className="mb-2 text-xs font-bold text-slate-700">Valid Parent ID</p>
+                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
+                                                <p className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors">Valid Parent ID</p>
                                                 <a
                                                     href={getSecureUrl(reviewingEnrollment.parent_id_path)}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 border border-slate-100"
+                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
                                                 >
                                                     <img
                                                         src={getSecureUrl(reviewingEnrollment.parent_id_path)}
@@ -815,44 +801,44 @@ export default function StudentManagement() {
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).style.display = 'none';
                                                             e.currentTarget.parentElement!.innerHTML =
-                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 text-indigo-600 gap-2"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
+                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-2 transition-colors"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
                                                         }}
                                                     />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                                        <div className="bg-white/90 opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-opacity uppercase tracking-wider">Expand Document</div>
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                        <div className="bg-white/90 dark:bg-zinc-900/90 dark:text-white opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-all uppercase tracking-wider">Expand Document</div>
                                                     </div>
                                                 </a>
                                             </div>
                                         </div>
-                                        <p className="text-[10px] text-slate-400 italic text-center italic">Documents are encrypted and will be automatically purged upon approval/rejection.</p>
+                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center italic transition-colors">Documents are encrypted and will be automatically purged upon approval/rejection.</p>
                                     </div>
 
                                     {/* RIGHT SIDE: Application Details (5 columns) */}
                                     <div className="lg:col-span-5 space-y-6">
-                                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-                                            <h4 className="text-[11px] font-bold text-indigo-500 uppercase tracking-[0.2em] border-b border-slate-50 pb-3">
+                                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-5 shadow-sm space-y-4 transition-colors">
+                                            <h4 className="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] border-b border-slate-50 dark:border-slate-800 pb-3 transition-colors">
                                                 Identity Details
                                             </h4>
 
                                             <div className="space-y-3">
                                                 <div>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Learner Name</p>
-                                                    <p className="text-base font-extrabold text-slate-900">{reviewingEnrollment.first_name} {reviewingEnrollment.last_name}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Learner Name</p>
+                                                    <p className="text-base font-extrabold text-slate-900 dark:text-white transition-colors">{reviewingEnrollment.first_name} {reviewingEnrollment.last_name}</p>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Birthday</p>
-                                                        <p className="text-sm font-bold text-slate-800">{formatPHDate(reviewingEnrollment.date_of_birth)}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Birthday</p>
+                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{formatPHDate(reviewingEnrollment.date_of_birth)}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gender</p>
-                                                        <p className="text-sm font-bold text-slate-800">{reviewingEnrollment.gender}</p>
+                                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Gender</p>
+                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{reviewingEnrollment.gender}</p>
                                                     </div>
                                                 </div>
-                                                <div className="pt-2 border-t border-slate-50">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Submitted By (Parent)</p>
-                                                    <p className="text-sm font-bold text-slate-900 flex items-center gap-2 mt-0.5">
-                                                        <UserCheck className="size-3.5 text-slate-400" />
+                                                <div className="pt-2 border-t border-slate-50 dark:border-slate-800 transition-colors">
+                                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Submitted By (Parent)</p>
+                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5 transition-colors">
+                                                        <UserCheck className="size-3.5 text-slate-400 dark:text-slate-500" />
                                                         {reviewingEnrollment.user.first_name} {reviewingEnrollment.user.last_name}
                                                     </p>
                                                 </div>
@@ -860,25 +846,25 @@ export default function StudentManagement() {
                                         </div>
 
                                         {/* Assignment Area */}
-                                        <div className="rounded-2xl border-2 border-indigo-50 bg-indigo-50/40 p-5 shadow-inner space-y-4 relative overflow-hidden">
-                                            <div className="absolute -right-4 -top-4 size-20 rounded-full bg-indigo-100 blur-2xl opacity-50"></div>
-                                            <h4 className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.2em] relative z-10">
+                                        <div className="rounded-2xl border-2 border-indigo-50 dark:border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-500/10 p-5 shadow-inner space-y-4 relative overflow-hidden transition-colors">
+                                            <div className="absolute -right-4 -top-4 size-20 rounded-full bg-indigo-100 dark:bg-indigo-500/20 blur-2xl opacity-50 transition-colors"></div>
+                                            <h4 className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] relative z-10 transition-colors">
                                                 Final Placement
                                             </h4>
 
                                             <div className="relative z-10 space-y-4">
                                                 <div>
-                                                    <label className="mb-2 block text-xs font-black text-slate-700">Assign to Section / Class *</label>
+                                                    <label className="mb-2 block text-xs font-black text-slate-700 dark:text-slate-300 transition-colors">Assign to Section / Class *</label>
                                                     {sections.filter((s) => s.daycare_id == reviewingEnrollment.daycare.id).length === 0 ? (
-                                                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-600 font-medium">
-                                                            No Sections configured for <b>{reviewingEnrollment.daycare.name}</b>. Create a section in settings first.
+                                                        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 p-4 text-xs text-red-600 dark:text-red-400 font-medium transition-colors">
+                                                            No Sections configured for <b className="dark:text-red-300">{reviewingEnrollment.daycare.name}</b>. Create a section in settings first.
                                                         </div>
                                                     ) : (
                                                         <>
                                                             <select
                                                                 className={cn(
-                                                                    "w-full h-11 rounded-xl border-slate-200 bg-white px-3 text-sm font-bold shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10",
-                                                                    selectedSectionId ? "text-slate-900" : "text-slate-400"
+                                                                    "w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 px-3 text-sm font-bold shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/20",
+                                                                    selectedSectionId ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"
                                                                 )}
                                                                 value={selectedSectionId}
                                                                 onChange={(e) => setSelectedSectionId(e.target.value)}
@@ -896,7 +882,7 @@ export default function StudentManagement() {
                                                                                 key={section.id}
                                                                                 value={section.id}
                                                                                 disabled={isFull}
-                                                                                className={isFull ? "text-red-400" : "text-slate-900"}
+                                                                                className={isFull ? "text-red-400 dark:text-red-500" : "text-slate-900 dark:text-slate-200"}
                                                                             >
                                                                                 {section.name} — {currentCount}/{section.capacity}
                                                                                 {isFull ? " (FULL)" : ` (${remaining} slots left)`}
@@ -905,14 +891,14 @@ export default function StudentManagement() {
                                                                     })}
                                                             </select>
                                                             {selectedSectionId && (
-                                                                <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/50 p-2 border border-indigo-100/50">
-                                                                    <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                                                                    <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-tight">
+                                                                <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-zinc-900/50 p-2 border border-indigo-100/50 dark:border-indigo-500/20 transition-colors">
+                                                                    <div className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                                                                    <p className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-tight transition-colors">
                                                                         Real-time Slot Verification Active
                                                                     </p>
                                                                 </div>
                                                             )}
-                                                            <p className="mt-2 text-[10px] text-indigo-500 font-medium">
+                                                            <p className="mt-2 text-[10px] text-indigo-500 dark:text-indigo-400 font-medium transition-colors">
                                                                 This learner will be added to the teacher's roster immediately upon approval.
                                                             </p>
                                                         </>
@@ -925,17 +911,17 @@ export default function StudentManagement() {
                             </div>
                         )}
 
-                        <DialogFooter className="p-6 border-t border-slate-100 bg-white flex flex-row items-center justify-between sm:justify-between rounded-b-2xl">
+                        <DialogFooter className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex flex-row items-center justify-between sm:justify-between rounded-b-2xl transition-colors">
                             <Button
                                 variant="ghost"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 font-bold h-11 rounded-xl"
+                                className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 font-bold h-11 rounded-xl transition-colors"
                                 onClick={handleRejectEnrollment}
                             >
                                 <XCircle className="mr-2 size-4" /> Reject Application
                             </Button>
                             <Button
                                 onClick={handleApproveEnrollment}
-                                className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 px-8 h-11 rounded-xl font-bold transition-all hover:-translate-y-0.5"
+                                className="bg-emerald-600 dark:bg-emerald-600 text-white hover:bg-emerald-700 dark:hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 px-8 h-11 rounded-xl font-bold transition-all hover:-translate-y-0.5"
                             >
                                 <CheckCircle2 className="mr-2 size-4" /> Approve & Enroll
                             </Button>
@@ -1000,30 +986,30 @@ export default function StudentManagement() {
             </div>
 
             <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
-                <DialogContent className="text-center sm:max-w-md">
+                <DialogContent className="text-center sm:max-w-md bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200">
                     <DialogHeader>
-                        <DialogTitle className="text-center text-2xl font-bold text-indigo-600">Student Added Successfully!</DialogTitle>
-                        <DialogDescription className="pt-2 text-center text-slate-600">
+                        <DialogTitle className="text-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 transition-colors">Student Added Successfully!</DialogTitle>
+                        <DialogDescription className="pt-2 text-center text-slate-600 dark:text-slate-400 transition-colors">
                             Please provide this Secret PIN to the parents of <br />
-                            <span className="font-semibold text-slate-900">{pinData.name}</span>.
+                            <span className="font-semibold text-slate-900 dark:text-slate-200">{pinData.name}</span>.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                        <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-100 px-8 py-4">
-                            <span className="font-mono text-4xl font-black tracking-[0.2em] text-slate-900">{pinData.code}</span>
+                        <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-zinc-900 px-8 py-4 transition-colors">
+                            <span className="font-mono text-4xl font-black tracking-[0.2em] text-slate-900 dark:text-white transition-colors">{pinData.code}</span>
                         </div>
-                        <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-600">
+                        <p className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 transition-colors">
                             Parents will need this code + the child's exact Date of Birth to link their accounts.
                         </p>
                     </div>
 
                     <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-center">
-                        <Button type="button" variant="outline" onClick={copyToClipboard} className="gap-2">
-                            {copied ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
+                        <Button type="button" variant="outline" onClick={copyToClipboard} className="gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                            {copied ? <Check className="size-4 text-green-600 dark:text-green-500" /> : <Copy className="size-4" />}
                             {copied ? 'Copied!' : 'Copy Code'}
                         </Button>
-                        <Button type="button" onClick={() => setPinModalOpen(false)}>
+                        <Button type="button" onClick={() => setPinModalOpen(false)} className="bg-indigo-600 dark:bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-500 transition-colors">
                             Done
                         </Button>
                     </DialogFooter>
