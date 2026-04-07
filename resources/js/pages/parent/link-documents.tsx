@@ -28,33 +28,33 @@ export default function LinkDocuments({ studentName }: { studentName: string }) 
             <Head title="Verify Identity" />
 
             {/* Generous vertical padding for a modern, airy feel */}
-            <div className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
+            <div className="mx-auto max-w-4xl px-4 py-12 sm:py-16 transition-colors duration-200">
 
                 {/* Header Section */}
                 <div className="mb-10 text-center sm:mb-12">
-                    <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 ring-8 ring-indigo-50/50">
-                        <ShieldCheck className="h-10 w-10 text-indigo-600" />
+                    <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 ring-8 ring-indigo-50/50 dark:ring-indigo-500/20 transition-colors">
+                        <ShieldCheck className="h-10 w-10 text-indigo-600 dark:text-indigo-400" />
                     </div>
-                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl transition-colors">
                         Final Security Step
                     </h1>
-                    <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600">
-                        We found the record for <strong className="font-semibold text-indigo-600">{studentName}</strong>!
+                    <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-600 dark:text-slate-400 transition-colors">
+                        We found the record for <strong className="font-semibold text-indigo-600 dark:text-indigo-400">{studentName}</strong>!
                         To protect student privacy, please verify your relationship by uploading the required documents below.
                     </p>
                 </div>
 
-                <Card className="overflow-hidden border-slate-200/60 shadow-xl shadow-slate-200/40 sm:rounded-2xl">
-                    <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-6 py-6 sm:px-10">
-                        <CardTitle className="text-xl font-bold text-slate-800">
+                <Card className="overflow-hidden border-slate-200/60 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none bg-white dark:bg-zinc-900 sm:rounded-2xl transition-colors">
+                    <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-950/50 px-6 py-6 sm:px-10 transition-colors">
+                        <CardTitle className="text-xl font-bold text-slate-800 dark:text-white transition-colors">
                             Secure Document Upload
                         </CardTitle>
-                        <CardDescription className="mt-1.5 text-sm text-slate-500">
+                        <CardDescription className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 transition-colors">
                             Documents are strictly encrypted and automatically deleted after Admin review. Max size: 5MB per file.
                         </CardDescription>
                     </CardHeader>
 
-                    <CardContent className="px-6 py-8 sm:p-10">
+                    <CardContent className="px-6 py-8 sm:p-10 transition-colors">
                         <form onSubmit={handleSubmit} className="space-y-8">
 
                             {/* Input Fields Grid */}
@@ -62,32 +62,32 @@ export default function LinkDocuments({ studentName }: { studentName: string }) 
 
                                 {/* 1. Birth Certificate Field */}
                                 <div className="group flex flex-col">
-                                    <label className="mb-2.5 flex items-center text-sm font-semibold text-slate-700">
-                                        <FileText className="mr-2 h-4 w-4 text-slate-400" />
+                                    <label className="mb-2.5 flex items-center text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors">
+                                        <FileText className="mr-2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                                         Child's Birth Certificate
                                     </label>
 
-                                    <div className={`relative flex min-h-[12rem] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 ease-in-out focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 ${
+                                    <div className={`relative flex min-h-[12rem] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 ease-in-out focus-within:border-indigo-500 dark:focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 dark:focus-within:ring-indigo-500/20 ${
                                         data.birth_cert
-                                            ? 'border-emerald-500 bg-emerald-50/50 hover:border-emerald-600 hover:bg-emerald-50'
-                                            : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/50'
+                                            ? 'border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10 hover:border-emerald-600 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20'
+                                            : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-zinc-950 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10'
                                     }`}>
                                         {data.birth_cert ? (
                                             <div className="flex flex-col items-center space-y-2">
-                                                <div className="rounded-full bg-emerald-100 p-3">
-                                                    <FileCheck className="h-8 w-8 text-emerald-600" />
+                                                <div className="rounded-full bg-emerald-100 dark:bg-emerald-500/20 p-3 transition-colors">
+                                                    <FileCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                                                 </div>
-                                                <span className="w-48 truncate px-2 text-sm font-bold text-emerald-800 sm:w-64">{data.birth_cert.name}</span>
-                                                <span className="text-xs font-medium text-emerald-600/80">{formatFileSize(data.birth_cert.size)}</span>
-                                                <span className="mt-2 text-xs font-semibold text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100">Click to change file</span>
+                                                <span className="w-48 truncate px-2 text-sm font-bold text-emerald-800 dark:text-emerald-300 sm:w-64 transition-colors">{data.birth_cert.name}</span>
+                                                <span className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80 transition-colors">{formatFileSize(data.birth_cert.size)}</span>
+                                                <span className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 opacity-0 transition-opacity group-hover:opacity-100">Click to change file</span>
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-center space-y-2">
-                                                <div className="rounded-full bg-indigo-100/50 p-3 text-indigo-500 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
+                                                <div className="rounded-full bg-indigo-100/50 dark:bg-indigo-500/20 p-3 text-indigo-500 dark:text-indigo-400 transition-colors group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
                                                     <UploadCloud className="h-8 w-8" />
                                                 </div>
-                                                <span className="text-sm font-semibold text-slate-700">Click or drag to upload</span>
-                                                <span className="text-xs font-medium text-slate-500">PDF, JPG, or PNG</span>
+                                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors">Click or drag to upload</span>
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-500 transition-colors">PDF, JPG, or PNG</span>
                                             </div>
                                         )}
                                         <input
@@ -98,37 +98,37 @@ export default function LinkDocuments({ studentName }: { studentName: string }) 
                                             onChange={(e) => setData('birth_cert', e.target.files ? e.target.files[0] : null)}
                                         />
                                     </div>
-                                    {errors.birth_cert && <p className="mt-2.5 text-sm font-medium text-red-500">{errors.birth_cert}</p>}
+                                    {errors.birth_cert && <p className="mt-2.5 text-sm font-medium text-red-500 dark:text-red-400">{errors.birth_cert}</p>}
                                 </div>
 
                                 {/* 2. Parent ID Field */}
                                 <div className="group flex flex-col">
-                                    <label className="mb-2.5 flex items-center text-sm font-semibold text-slate-700">
-                                        <UserSquare2 className="mr-2 h-4 w-4 text-slate-400" />
+                                    <label className="mb-2.5 flex items-center text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors">
+                                        <UserSquare2 className="mr-2 h-4 w-4 text-slate-400 dark:text-slate-500" />
                                         Valid Parent/Guardian ID
                                     </label>
 
-                                    <div className={`relative flex min-h-[12rem] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 ease-in-out focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 ${
+                                    <div className={`relative flex min-h-[12rem] flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 text-center transition-all duration-200 ease-in-out focus-within:border-indigo-500 dark:focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 dark:focus-within:ring-indigo-500/20 ${
                                         data.parent_id_doc
-                                            ? 'border-emerald-500 bg-emerald-50/50 hover:border-emerald-600 hover:bg-emerald-50'
-                                            : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/50'
+                                            ? 'border-emerald-500 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-500/10 hover:border-emerald-600 dark:hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/20'
+                                            : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-zinc-950 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10'
                                     }`}>
                                         {data.parent_id_doc ? (
                                             <div className="flex flex-col items-center space-y-2">
-                                                <div className="rounded-full bg-emerald-100 p-3">
-                                                    <FileCheck className="h-8 w-8 text-emerald-600" />
+                                                <div className="rounded-full bg-emerald-100 dark:bg-emerald-500/20 p-3 transition-colors">
+                                                    <FileCheck className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                                                 </div>
-                                                <span className="w-48 truncate px-2 text-sm font-bold text-emerald-800 sm:w-64">{data.parent_id_doc.name}</span>
-                                                <span className="text-xs font-medium text-emerald-600/80">{formatFileSize(data.parent_id_doc.size)}</span>
-                                                <span className="mt-2 text-xs font-semibold text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100">Click to change file</span>
+                                                <span className="w-48 truncate px-2 text-sm font-bold text-emerald-800 dark:text-emerald-300 sm:w-64 transition-colors">{data.parent_id_doc.name}</span>
+                                                <span className="text-xs font-medium text-emerald-600/80 dark:text-emerald-400/80 transition-colors">{formatFileSize(data.parent_id_doc.size)}</span>
+                                                <span className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 opacity-0 transition-opacity group-hover:opacity-100">Click to change file</span>
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-center space-y-2">
-                                                <div className="rounded-full bg-indigo-100/50 p-3 text-indigo-500 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-600">
+                                                <div className="rounded-full bg-indigo-100/50 dark:bg-indigo-500/20 p-3 text-indigo-500 dark:text-indigo-400 transition-colors group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">
                                                     <UploadCloud className="h-8 w-8" />
                                                 </div>
-                                                <span className="text-sm font-semibold text-slate-700">Click or drag to upload</span>
-                                                <span className="text-xs font-medium text-slate-500">PDF, JPG, or PNG</span>
+                                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors">Click or drag to upload</span>
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-500 transition-colors">PDF, JPG, or PNG</span>
                                             </div>
                                         )}
                                         <input
@@ -139,21 +139,21 @@ export default function LinkDocuments({ studentName }: { studentName: string }) 
                                             onChange={(e) => setData('parent_id_doc', e.target.files ? e.target.files[0] : null)}
                                         />
                                     </div>
-                                    {errors.parent_id_doc && <p className="mt-2.5 text-sm font-medium text-red-500">{errors.parent_id_doc}</p>}
+                                    {errors.parent_id_doc && <p className="mt-2.5 text-sm font-medium text-red-500 dark:text-red-400">{errors.parent_id_doc}</p>}
                                 </div>
 
                             </div>
 
                             {/* Upload Progress Indicator */}
                             {progress && (
-                                <div className="pt-2">
+                                <div className="pt-2 transition-colors">
                                     <div className="mb-2 flex justify-between text-sm font-medium">
-                                        <span className="text-indigo-700">Encrypting & Uploading...</span>
-                                        <span className="text-slate-600">{progress.percentage}%</span>
+                                        <span className="text-indigo-700 dark:text-indigo-400 transition-colors">Encrypting & Uploading...</span>
+                                        <span className="text-slate-600 dark:text-slate-400 transition-colors">{progress.percentage}%</span>
                                     </div>
-                                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-zinc-800 transition-colors">
                                         <div
-                                            className="h-full rounded-full bg-indigo-600 transition-all duration-300 ease-out"
+                                            className="h-full rounded-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-300 ease-out"
                                             style={{ width: `${progress.percentage}%` }}
                                         />
                                     </div>
@@ -165,11 +165,11 @@ export default function LinkDocuments({ studentName }: { studentName: string }) 
                                 <Button
                                     type="submit"
                                     disabled={processing}
-                                    className="h-14 w-full bg-indigo-600 text-base font-bold text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-700 hover:shadow-indigo-600/30 active:scale-[0.99] sm:text-lg"
+                                    className="h-14 w-full bg-indigo-600 dark:bg-indigo-600 text-base font-bold text-white shadow-lg shadow-indigo-600/20 dark:shadow-none transition-all hover:bg-indigo-700 dark:hover:bg-indigo-500 hover:shadow-indigo-600/30 active:scale-[0.99] sm:text-lg"
                                 >
                                     {processing ? 'Processing Request...' : 'Submit Documents for Review'}
                                 </Button>
-                                <p className="mt-4 text-center text-xs text-slate-500">
+                                <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400 transition-colors">
                                     By submitting, you agree to our data privacy policy regarding student records.
                                 </p>
                             </div>
