@@ -24,3 +24,5 @@ yarn-error.log
 /.zed
 key
 key.pub
+/config/database.php
+/config/mail.php
