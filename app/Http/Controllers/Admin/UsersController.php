@@ -200,7 +200,7 @@ class UsersController extends Controller
         // 2. Fetch all active users with the 'teacher' role, and immediately
         // 🚀 OPTIMIZATION: Used Collections pluck()->diff() to extract available names instantly
         $availableTeacherNames = User::where('role', 'teacher')
-            ->where('status', 'active')
+            ->where('status', 'Active')
             ->get(['id', 'first_name', 'middle_name', 'last_name'])
             ->pluck('full_name') // Plucks the accessor!
             ->diff($assignedTeachers) // Removes the ones already assigned

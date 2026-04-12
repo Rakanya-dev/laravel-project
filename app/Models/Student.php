@@ -137,9 +137,9 @@ class Student extends Model
     // --- Model Events (The Global Safety Net) ---
     protected static function booted()
     {
-        // 1. Listen for when a student's record is updated (e.g., status changed to Graduated)
+        // 1. Listen for when a student's record is updated
         static::updated(function ($student) {
-            if ($student->isDirty('status') && in_array($student->status, ['Completed', 'Graduated', 'Inactive'])) {
+            if ($student->isDirty('status') && in_array($student->status, ['Completed', 'Graduated', 'Inactive', 'Transferred'])) {
                 $student->deactivateEmptyNesterParents();
             }
         });
@@ -148,24 +148,32 @@ class Student extends Model
         static::deleted(function ($student) {
             $student->deactivateEmptyNesterParents();
         });
+
+        // 3. NEW: Listen for when a student is Restored
+        static::restored(function ($student) {
+            foreach ($student->parents as $parent) {
+                // If the parent is currently inactive, wake their account back up
+                if ($parent->status === 'Inactive') {
+                    $parent->update(['status' => 'Active']);
+
+                    // Optional: Keep your audit trail consistent!
+                    activity()
+                        ->performedOn($parent)
+                        ->log("Parent auto-activated because their child ({$student->first_name}) was restored.");
+                }
+            }
+        });
     }
-
-
-    /**
-     * Helper logic to safely deactivate parents who no longer have active kids.
-     */
     public function deactivateEmptyNesterParents()
     {
-        // Loop through all parents attached to this student
         foreach ($this->parents as $parent) {
 
-            // Does this parent have ANY other kids who are still active and not deleted?
+            // Check if parent has ANY other kids who are active
             $hasActiveKids = $parent->students()
-                ->where('students.id', '!=', $this->id) // Ignore the kid we just graduated/deleted
-                ->whereNull('students.deleted_at')       // Ensure sibling isn't archived (This one is correct!)
+                ->where('students.id', '!=', $this->id)
                 ->where(function ($query) {
                     $query->where('students.status', 'Active')
-                        ->orWhereNull('students.status'); // Treat null as Active
+                        ->orWhereNull('students.status');
                 })
                 ->exists();
 
@@ -173,7 +181,7 @@ class Student extends Model
             if (!$hasActiveKids && $parent->status !== 'Inactive') {
                 $parent->update(['status' => 'Inactive']);
 
-                // Optional: Log it so Admins know why it happened
+                // Activity Log
                 activity()
                     ->performedOn($parent)
                     ->log("Parent auto-deactivated because their last active child ({$this->first_name}) was archived or graduated.");
