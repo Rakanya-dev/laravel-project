@@ -112,8 +112,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            {/* 🚀 Dynamic Ziggy Route for the Logo! */}
-                            <Link href={route(`${role}.dashboard`)} prefetch>
+                            <Link href={role ? route(`${role}.dashboard`) : '/'} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
