@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && docker-php-ext-install pdo_mysql zip
 
+RUN docker-php-ext-install pdo_mysql zip mbstring exif pcntl bcmath gd
+
 # 2. Enable Apache mod_rewrite for Laravel routing
 RUN a2enmod rewrite
 
@@ -28,7 +30,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # 7. Install PHP dependencies
-RUN composer install --optimize-autoloader --no-dev
+RUN composer install --optimize-autoloader --no-dev --ignore-platform-reqs
 
 # 8. Set permissions for Laravel's storage and cache folders
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
