@@ -4,7 +4,6 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-// 👇 Added 'Settings2' for the configuration icon
 import { Building2, ClipboardList, FileBarChart2, GraduationCap, LayoutGrid, MessageSquareText, Settings2, User, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -15,27 +14,32 @@ export function AppSidebar() {
     const adminNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: '/admin/dashboard',
+            href: route('admin.dashboard'),
+            isActive: route().current('admin.dashboard*'),
             icon: LayoutGrid,
         },
         {
             title: 'Users Management',
-            href: '/admin/users-management',
+            href: route('admin.users-management'),
+            isActive: route().current('admin.users-management*'),
             icon: Users,
         },
         {
             title: 'Daycare Management',
-            href: '/admin/daycare-management',
+            href: route('admin.daycare-management'),
+            isActive: route().current('admin.daycare-management*'),
             icon: Building2,
         },
         {
             title: 'Student Management',
-            href: '/admin/student-management',
+            href: route('admin.student-management'),
+            isActive: route().current('admin.student-management*'),
             icon: GraduationCap,
         },
         {
             title: 'Reports',
-            href: '/admin/reports',
+            href: route('admin.reports'),
+            isActive: route().current('admin.reports*'),
             icon: FileBarChart2,
         },
         {
@@ -49,17 +53,20 @@ export function AppSidebar() {
     const teacherNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: '/teacher/dashboard',
+            href: route('teacher.dashboard'),
+            isActive: route().current('teacher.dashboard*'),
             icon: LayoutGrid,
         },
         {
             title: 'My Students',
-            href: '/teacher/my-students',
+            href: route('teacher.my-students'),
+            isActive: route().current('teacher.my-students*'),
             icon: Users,
         },
         {
             title: 'My Assessments',
-            href: '/teacher/assessments-management',
+            href: route('teacher.assessments-management'),
+            isActive: route().current('teacher.assessments-management*'),
             icon: ClipboardList,
         },
         {
@@ -73,12 +80,14 @@ export function AppSidebar() {
     const parentNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: '/parent/dashboard',
+            href: route('parent.dashboard'),
+            isActive: route().current('parent.dashboard*'),
             icon: LayoutGrid,
         },
         {
             title: 'Child Profile',
-            href: '/parent/child-profile',
+            href: route('parent.child-profile'),
+            isActive: route().current('parent.child-profile*'),
             icon: User,
         },
         {
@@ -88,6 +97,7 @@ export function AppSidebar() {
             icon: MessageSquareText,
         },
     ];
+
     const footerNavItems: NavItem[] = [];
 
     let mainNavItems: NavItem[] = [];
@@ -102,7 +112,8 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={`/${role}/dashboard`} prefetch>
+                            {/* 🚀 Dynamic Ziggy Route for the Logo! */}
+                            <Link href={route(`${role}.dashboard`)} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
