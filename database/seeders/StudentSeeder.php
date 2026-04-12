@@ -22,11 +22,11 @@ class StudentSeeder extends Seeder
             'Sto. Nino Child Development Center' => [
                 [
                     'child' => ['first_name' => 'Ezmielle Zicus', 'last_name' => 'Gammad', 'middle_name' => 'Reyes', 'dob' => '2021-10-15', 'gender' => 'Female', 'nickname' => 'Ezmi'],
-                    'parent' => ['first_name' => 'Maria', 'last_name' => 'Gammad', 'email' => 'maria.gammad@gmail.com', 'phone' => '09171234567', 'relation' => 'Mother']
+                    'parent' => ['first_name' => 'Maria', 'last_name' => 'Gammad', 'email' => 'maria.gammad@gmail.com', 'phone' => '+63 917 123 4567', 'relation' => 'Mother']
                 ],
                 [
                     'child' => ['first_name' => 'Elijah', 'last_name' => 'Cruz', 'middle_name' => 'Ramos', 'dob' => '2020-05-20', 'gender' => 'Male', 'nickname' => 'Eli'],
-                    'parent' => ['first_name' => 'Juan', 'last_name' => 'Cruz', 'email' => 'juan.cruz@gmail.com', 'phone' => '09182223333', 'relation' => 'Father']
+                    'parent' => ['first_name' => 'Juan', 'last_name' => 'Cruz', 'email' => 'juan.cruz@gmail.com', 'phone' => '+63 918 222 3333', 'relation' => 'Father']
                 ],
             ],
         ];
@@ -86,7 +86,8 @@ class StudentSeeder extends Seeder
                             'first_name' => $isMother ? $faker->firstNameFemale : $faker->firstNameMale,
                             'last_name' => $lastName,
                             'email' => $faker->unique()->safeEmail,
-                            'phone' => '09' . $faker->numerify('#########'),
+                            // 🚀 Updated Faker logic for PH Mobile format
+                            'phone' => $faker->numerify('+63 9## ### ####'),
                             'relation' => $isMother ? 'Mother' : 'Father'
                         ];
                     }

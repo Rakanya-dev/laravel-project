@@ -91,7 +91,7 @@ class DashboardController extends Controller
                     'contact_avatar' => $teacher->profile_photo,
                     'contact_role' => 'Teacher',
                     'last_message' => 'Say hello to start the conversation!',
-                    'time' => '',
+                    'time' => null,
                 ];
             });
 
