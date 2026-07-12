@@ -10,8 +10,10 @@ import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import AppLogo from './app-logo';
 
-// Removed mainNavItems since this is a single-page view
+// 🚀 IMPORT THE NOTIFICATION POPOVER
+import { NotificationPopover } from '@/components/shared/notification-popover';
 
+// Removed mainNavItems since this is a single-page view
 const rightNavItems: NavItem[] = [
     // Keep this array empty but available if you ever want to add external links
 ];
@@ -33,7 +35,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
 
     return (
         <>
-            <div className="border-sidebar-border/80 border-b bg-white dark:bg-neutral-900">
+            <div className="border-sidebar-border/80 border-b bg-white dark:bg-zinc-950 transition-colors">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
 
                     {/* Logo - Pushed to the left */}
@@ -41,11 +43,9 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <AppLogo />
                     </Link>
 
-                    {/* Right Side - Profile & Optional Tooltip Links */}
-                    <div className="ml-auto flex items-center space-x-2">
-                        <div className="relative flex items-center space-x-1">
-                            {/* 🚀 Removed the Search button here */}
-
+                    {/* Right Side - Profile, Notifications & Optional Tooltip Links */}
+                    <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                        <div className="relative flex items-center">
                             <div className="hidden lg:flex">
                                 {rightNavItems.map((item) => (
                                     <TooltipProvider key={item.title} delayDuration={0}>
@@ -70,18 +70,26 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             </div>
                         </div>
 
+                        {/* 🚀 NOTIFICATION POPOVER */}
+                        <NotificationPopover
+                            userId={auth.user?.id}
+                            initialNotifications={auth?.notifications}
+                            unreadCount={auth?.unreadNotificationsCount}
+                        />
+
+                        {/* USER PROFILE DROPDOWN */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="size-10 rounded-full p-1 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all">
-                                    <Avatar className="size-8 overflow-hidden rounded-full">
+                                <Button variant="ghost" className="size-12 rounded-full p-1 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all shadow-sm">
+                                    <Avatar className="size-full overflow-hidden rounded-full">
                                         <AvatarImage src={auth.user.avatar} alt={userName} />
-                                        <AvatarFallback className="rounded-lg bg-indigo-100 text-indigo-700 font-bold dark:bg-indigo-900 dark:text-indigo-200">
+                                        <AvatarFallback className="bg-indigo-50 text-indigo-700 font-bold dark:bg-indigo-500/20 dark:text-indigo-400">
                                             {getInitials(userName)}
                                         </AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end">
+                            <DropdownMenuContent className="w-64 rounded-2xl dark:bg-zinc-900 dark:border-slate-800 shadow-xl" align="end">
                                 <UserMenuContent user={auth.user} />
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -90,8 +98,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </div>
 
             {breadcrumbs.length > 1 && (
-                <div className="border-sidebar-border/70 flex w-full border-b bg-neutral-50/50 dark:bg-neutral-900/50">
-                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl">
+                <div className="border-sidebar-border/70 flex w-full border-b bg-slate-50/50 dark:bg-zinc-950/50 transition-colors">
+                    <div className="mx-auto flex h-12 w-full items-center justify-start px-4 text-slate-500 dark:text-slate-400 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
                 </div>

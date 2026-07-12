@@ -28,4 +28,9 @@ class AssessmentDomain extends Model
     {
         return $this->hasMany(AssessmentScore::class, 'domain_id');
     }
+
+    public function daycares()
+    {
+        return $this->belongsToMany(Daycare::class, 'daycare_domain', 'domain_id', 'daycare_id');
+    }
 }

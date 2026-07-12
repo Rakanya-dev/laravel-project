@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Archive } from 'lucide-react';
-import type { Student } from '@/pages/admin/student-management'; // Import shared type
+import { Archive, X } from 'lucide-react';
+import type { Student } from '@/pages/admin/student-management';
 
 interface BulkArchiveDialogProps {
     selectedStudents: Student[];
@@ -28,52 +28,72 @@ export function BulkArchiveDialog({
 }: BulkArchiveDialogProps) {
 
     return (
-        <DialogContent className="max-w-[600px]">
-            <DialogHeader>
-                <DialogTitle>Bulk Archive Child Records</DialogTitle>
-                <DialogDescription>
-                    Set the status for {selectedStudents.length} selected student(s) before archiving
-                </DialogDescription>
-            </DialogHeader>
+        <DialogContent hideClose className="sm:max-w-[600px] p-0 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl bg-white dark:bg-zinc-950 transition-colors duration-200">
 
-            <div className="space-y-4 py-4">
+            {/* Header - Synced with premium modal layouts */}
+            <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                <DialogHeader className="text-left">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                            <Archive className="size-6" strokeWidth={2.5} />
+                        </div>
+                        <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                            Bulk Archive Records
+                        </DialogTitle>
+                    </div>
+                    <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+                        Set the status for <strong className="text-slate-700 dark:text-slate-300">{selectedStudents.length}</strong> selected student(s) before moving them to the archive.
+                    </DialogDescription>
+                </DialogHeader>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-zinc-950/30">
+
                 {/* Selected Students Preview */}
-                <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
-                    <Label className="text-blue-900">Selected Students ({selectedStudents.length})</Label>
-                    <div className="mt-2 max-h-[120px] overflow-y-auto space-y-1">
+                <div className="rounded-2xl bg-blue-50/50 dark:bg-blue-500/10 p-5 border border-blue-100 dark:border-blue-500/20 shadow-sm transition-colors">
+                    <Label className="text-[11px] font-bold uppercase tracking-widest text-blue-800 dark:text-blue-400">
+                        Selected Students ({selectedStudents.length})
+                    </Label>
+                    <div className="mt-3 max-h-[140px] overflow-y-auto space-y-2 custom-scrollbar pr-2">
                         {selectedStudents.map(student => (
-                            <div key={student.id} className="text-[13px] text-blue-800 flex items-center justify-between">
-                                <span>{`${student.firstName} ${student.middleName} ${student.lastName}`.trim()}</span>
-                                <span className="text-[12px] text-blue-600">Current: {student.status}</span>
+                            <div key={student.id} className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-zinc-900 border border-blue-100 dark:border-blue-500/30 shadow-sm transition-colors">
+                                <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate pr-4">
+                                    {`${student.firstName} ${student.middleName || ''} ${student.lastName}`.trim()}
+                                </span>
+                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                                    Current: {student.status}
+                                </span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Status Selection */}
-                <div className="space-y-2">
-                    <Label htmlFor="bulkArchiveStatus">
+                <div className="space-y-2.5">
+                    <Label htmlFor="bulkArchiveStatus" className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                         Apply Status to All <span className="text-red-500">*</span>
                     </Label>
                     <Select value={bulkArchiveStatus} onValueChange={(value: any) => onArchiveStatusChange(value)}>
-                        <SelectTrigger id="bulkArchiveStatus"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Graduated">
-                                <div className="flex items-center gap-2">
-                                    <Badge className="bg-[#f4e9fe] text-[#9846dd] border-purple-50">Graduated</Badge>
-                                    <span className="text-[13px] text-neutral-500">Completed the program</span>
+                        <SelectTrigger id="bulkArchiveStatus" className="h-12 text-base rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 focus-visible:ring-indigo-500 font-medium text-slate-900 dark:text-slate-200 transition-colors shadow-sm">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800">
+                            <SelectItem value="Graduated" className="rounded-lg py-3 cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Badge className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-900/50 uppercase tracking-widest text-[11px] font-bold px-2.5 py-0.5 shadow-none transition-colors">Graduated</Badge>
+                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Completed the program</span>
                                 </div>
                             </SelectItem>
-                            <SelectItem value="Transferred">
-                                <div className="flex items-center gap-2">
-                                    <Badge className="bg-[#eff6fe] text-[#4b7ae8] border-[#d7e9fd]">Transferred</Badge>
-                                    <span className="text-[13px] text-neutral-500">Moved to another facility</span>
+                            <SelectItem value="Transferred" className="rounded-lg py-3 cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-900/50 uppercase tracking-widest text-[11px] font-bold px-2.5 py-0.5 shadow-none transition-colors">Transferred</Badge>
+                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Moved to another facility</span>
                                 </div>
                             </SelectItem>
-                            <SelectItem value="Inactive">
-                                <div className="flex items-center gap-2">
-                                    <Badge className="bg-gray-50 text-[#697280] border-[#f3f4f5]">Inactive</Badge>
-                                    <span className="text-[13px] text-neutral-500">No longer attending</span>
+                            <SelectItem value="Inactive" className="rounded-lg py-3 cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Badge className="bg-slate-100 text-slate-600 border-slate-200 dark:bg-zinc-800 dark:text-slate-400 dark:border-slate-700 uppercase tracking-widest text-[11px] font-bold px-2.5 py-0.5 shadow-none transition-colors">Inactive</Badge>
+                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300">No longer attending</span>
                                 </div>
                             </SelectItem>
                         </SelectContent>
@@ -81,34 +101,39 @@ export function BulkArchiveDialog({
                 </div>
 
                 {/* Bulk Archive Reason */}
-                <div className="space-y-2">
-                    <Label htmlFor="bulkArchiveReason">Archive Notes (Optional)</Label>
+                <div className="space-y-2.5">
+                    <Label htmlFor="bulkArchiveReason" className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Archive Notes (Optional)
+                    </Label>
                     <Input
                         id="bulkArchiveReason"
                         value={bulkArchiveReason}
                         onChange={(e) => onArchiveReasonChange(e.target.value)}
-                        placeholder="e.g., End of school year graduation..."
+                        placeholder="e.g. End of school year graduation..."
+                        className="h-12 text-base rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 focus-visible:ring-indigo-500 font-medium text-slate-900 dark:text-white dark:placeholder:text-slate-500 transition-colors shadow-sm"
                     />
                 </div>
 
                 {/* Warning */}
-                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                    <div className="flex gap-2">
-                        <Archive className="size-4 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="text-[13px]">
-                            <p className="text-amber-900">
-                                All {selectedStudents.length} selected records will be archived with status: <strong>{bulkArchiveStatus}</strong>
-                            </p>
-                        </div>
+                <div className="flex items-start gap-4 rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-5 sm:p-6 border border-amber-200 dark:border-amber-900/50 shadow-sm transition-colors">
+                    <Archive className="size-6 shrink-0 text-amber-500 dark:text-amber-400" />
+                    <div className="font-medium text-amber-800 dark:text-amber-300">
+                        <p className="font-extrabold uppercase tracking-widest text-[11px] mb-1.5">Action Confirmation</p>
+                        <p className="text-base leading-relaxed">
+                            All <strong className="font-black text-amber-900 dark:text-amber-100">{selectedStudents.length}</strong> selected records will be archived with the status <strong className="font-black text-amber-900 dark:text-amber-100">{bulkArchiveStatus}</strong>.
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <DialogFooter>
-                <Button variant="outline" onClick={onCancel}>Cancel</Button>
-                <Button onClick={onConfirm} className="bg-black hover:bg-black/90">
-                    <Archive className="size-4 mr-2" />
-                    Archive {selectedStudents.length} Student(s)
+            {/* Footer */}
+            <DialogFooter className="px-6 py-5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 flex-col sm:flex-row transition-colors m-0">
+                <Button variant="ghost" onClick={onCancel} className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <X className="mr-2 size-5" /> Cancel
+                </Button>
+                <Button onClick={onConfirm} className="h-12 w-full sm:w-auto px-8 rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white text-base font-bold shadow-sm transition-colors">
+                    <Archive className="mr-2 size-5" />
+                    Archive {selectedStudents.length} Student{selectedStudents.length !== 1 ? 's' : ''}
                 </Button>
             </DialogFooter>
         </DialogContent>

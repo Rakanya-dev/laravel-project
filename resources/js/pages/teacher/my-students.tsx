@@ -16,7 +16,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { ArchivedStudentsDialog } from '@/components/shared/archived-students-dialog';
 import { StudentListView } from '@/components/shared/student-list-view';
 
-// 🚀 FIXED: Unified single Student Interface
+// 🚀 Unified single Student Interface
 export interface Student {
     id: number;
     firstName: string;
@@ -204,7 +204,7 @@ export default function TeacherStudentsPage() {
             });
         }
 
-        // 🚀 FIX: Smart Sorting Logic
+        // 🚀 Smart Sorting Logic
         return result.sort((a, b) => {
             // Priority 1: Bring Draft & In Progress assessments to the very top
             const aNeedsAttention = a.assessmentStatus === 'In Progress' || a.assessmentStatus === 'Draft' ? 1 : 0;
@@ -419,16 +419,18 @@ export default function TeacherStudentsPage() {
             ]}
         >
             <Head title="My Students" />
-            <div className="p-4 sm:p-6 lg:p-8">
+
+            {/* 🚀 PREMIUM PAGE WRAPPER */}
+            <div className="flex-1 p-6 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 transition-colors w-full">
                 <StudentListView
                     role="teacher"
-                    paginatedStudents={paginatedData} // Change from `paginatedStudents` to `paginatedData` which is defined in your page
+                    paginatedStudents={paginatedData}
                     filteredStudents={filteredStudents}
                     selectedStudents={selectedStudents}
                     currentPage={currentPage}
                     totalPages={totalPages}
                     searchQuery={searchQuery}
-                    itemsPerPage={itemsPerPage} // Change from ITEMS_PER_PAGE to itemsPerPage
+                    itemsPerPage={itemsPerPage}
                     sectionList={availableSections}
                     filterSection={sectionFilter}
                     filterStatus={statusFilter}
@@ -467,10 +469,10 @@ export default function TeacherStudentsPage() {
                     }}
                     onOpenArchive={handleArchiveClick}
                     onGraduate={handleGraduate}
-                    // FIX: Renamed from onGrades to onProgressReport to match the component props
                     onProgressReport={(s) => router.visit(route('teacher.reports.student', s.id))}
                 />
             </div>
+
             <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
                 <ArchiveStudentDialog
                     student={archivingStudent}
@@ -480,13 +482,13 @@ export default function TeacherStudentsPage() {
                     onArchiveReasonChange={setArchiveReason}
                     onConfirm={handleArchiveConfirm}
                     onCancel={() => setIsArchiveDialogOpen(false)}
-                    // Teachers use Bulk, so we pass these two props:
                     isBulk={selectedStudents.size > 0}
                     selectedStudents={Array.from(selectedStudents)
                         .map((id) => allStudents.find((s) => s.id === id)!)
                         .filter(Boolean)}
                 />
             </Dialog>
+
             <ViewStudentDialog
                 open={isViewStudentOpen}
                 onOpenChange={setIsViewStudentOpen}
@@ -495,6 +497,7 @@ export default function TeacherStudentsPage() {
                 onStartAssessment={() => handleNewAssessmentTrigger(selectedStudent?.id)}
                 isArchived={selectedStudent?.archived}
             />
+
             {isAddEditOpen && (
                 <AddEditStudentDialog
                     open={isAddEditOpen}
@@ -506,6 +509,7 @@ export default function TeacherStudentsPage() {
                     sections={sections}
                 />
             )}
+
             <NewAssessmentDialog
                 open={isAddAssessmentOpen}
                 onOpenChange={setIsAddAssessmentOpen}
@@ -515,6 +519,7 @@ export default function TeacherStudentsPage() {
                 onSave={handleCreateAssessment}
                 isSubmitting={isSubmitting}
             />
+
             <ArchivedStudentsDialog
                 open={isArchivedListOpen}
                 onOpenChange={setIsArchivedListOpen}
@@ -525,7 +530,7 @@ export default function TeacherStudentsPage() {
                 }}
                 onRestore={handleRestore}
                 onBulkRestore={handleBulkRestore}
-                onPrintReport={(student) => window.open(route('teacher.students.consolidated-report', student.id), '_blank')}            // Notice: We do NOT pass daycareList or onDelete. The component protects itself!
+                onPrintReport={(student) => window.open(route('teacher.students.consolidated-report', student.id), '_blank')}
             />
         </AppLayout>
     );

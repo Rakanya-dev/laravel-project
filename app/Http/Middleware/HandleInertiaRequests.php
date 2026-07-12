@@ -79,6 +79,19 @@ class HandleInertiaRequests extends Middleware
                         return null;
                     },
                 ] : null,
+                'notifications' => $user ? $user->notifications()->take(10)->get()->map(function ($notification) {
+                    return [
+                        'id' => $notification->id,
+                        'type' => $notification->data['type'] ?? 'system',
+                        'title' => $notification->data['title'] ?? 'Notification',
+                        'message' => $notification->data['message'] ?? '',
+                        'url' => $notification->data['url'] ?? null,
+                        'time' => $notification->created_at->diffForHumans(), // "2 minutes ago"
+                        'is_read' => $notification->read_at !== null,
+                    ];
+                }) : [],
+                // Fetch the count for the red dot indicator
+                'unreadNotificationsCount' => $user ? $user->unreadNotifications()->count() : 0,
             ],
 
             'flash' => [

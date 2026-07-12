@@ -1,8 +1,11 @@
 import { LucideIcon } from 'lucide-react';
 import type { Config } from 'ziggy-js';
+import { type Notification } from '@/components/shared/notification-popover';
 
 export interface Auth {
     user: User;
+    notifications?: Notification[];
+    unreadNotificationsCount?: number;
 }
 
 export interface BreadcrumbItem {

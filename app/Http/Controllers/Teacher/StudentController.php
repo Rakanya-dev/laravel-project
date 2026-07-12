@@ -17,6 +17,7 @@ use Inertia\Inertia;
 use Illuminate\Auth\Access\AuthorizationException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 // 1. IMPORT THE EVENT
 use App\Events\StudentUpdated;
 
@@ -364,7 +365,7 @@ class StudentController extends Controller
             $sectionId = null;
             if ($sessionName) {
                 $matchedSection = $sectionsData->where('daycare_id', $daycareId)
-                    ->filter(function($sec) use ($sessionName) {
+                    ->filter(function ($sec) use ($sessionName) {
                         return str_contains(strtolower($sec->name), strtolower(trim($sessionName)));
                     })->first();
 
@@ -515,5 +516,145 @@ class StudentController extends Controller
         ]);
 
         return $pdf->stream($student->last_name . '_Official_ECCD_Report.pdf');
+    }
+
+    public function printAll(Request $request)
+    {
+        // 1. SECURITY LOCK: Get the logged-in Teacher's assigned Daycare ID
+        $teacherDaycareId = Auth::user()->daycare_id;
+
+        // 2. Base Query: Force it to only fetch students from THEIR daycare,
+        // and eager-load the 'section' and 'parents' relationships for the Blade view.
+        $query = Student::with(['section', 'parents', 'assessments'])
+            ->where('daycare_id', $teacherDaycareId);
+
+        // 3. Apply Search Filter
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('first_name', 'like', '%' . $request->search . '%')
+                    ->orWhere('last_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // 4. Apply Status Filter
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // 5. Apply Section Filter (Specific to this teacher's view)
+        if ($request->section && $request->section !== 'all') {
+            $query->whereHas('section', function ($q) use ($request) {
+                $q->where('name', $request->section);
+            });
+        }
+
+        // 6. Apply Assessment Status Filter
+        if ($request->assessment && $request->assessment !== 'all') {
+            $query->whereHas('assessments', function ($q) use ($request) {
+                $q->where('status', $request->assessment);
+            });
+        }
+
+        // 7. Execute the query using get() to fetch all matching records without pagination
+        $students = $query->get();
+
+        // 8. Return the shared Excel-style Blade view!
+        return view('print.students-spreadsheet', [
+            'students' => $students,
+            'title' => 'My Class Roster',
+            'role' => 'teacher' // This tells the Blade view to show "Session" instead of "Branch"
+        ]);
+    }
+
+
+    public function export(Request $request)
+    {
+        // 1. SECURITY LOCK: Only fetch students from THIS teacher's daycare
+        $teacherDaycareId = Auth::user()->daycare_id;
+        $query = Student::with(['section', 'parents', 'assessments'])
+            ->where('daycare_id', $teacherDaycareId);
+        // 2. Apply Search Filter
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('first_name', 'like', '%' . $request->search . '%')
+                    ->orWhere('last_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // 3. Apply Status Filter
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // 4. Apply Section Filter
+        if ($request->section && $request->section !== 'all') {
+            $query->whereHas('section', function ($q) use ($request) {
+                $q->where('name', $request->section);
+            });
+        }
+
+        // 5. Apply Assessment Status Filter
+        if ($request->assessment && $request->assessment !== 'all') {
+            $query->whereHas('assessments', function ($q) use ($request) {
+                $q->where('status', $request->assessment);
+            });
+        }
+
+        $students = $query->get();
+
+        // 6. Generate and Stream the CSV File
+        $response = new StreamedResponse(function () use ($students) {
+            $handle = fopen('php://output', 'w');
+
+            // Write CSV Headers
+            fputcsv($handle, [
+                'Student ID',
+                'Last Name',
+                'First Name',
+                'Middle Name',
+                'Session',
+                'Enrollment Status',
+                'Assessment Status',
+                'Latest Score',
+                'Date of Birth',
+                'Parent / Guardian'
+            ]);
+            // Write Data Rows
+            foreach ($students as $student) {
+                // Grab parent name
+                $parentName = 'Unlinked';
+                if ($student->parents && $student->parents->count() > 0) {
+                    $parent = $student->parents->first();
+                    $parentName = $parent->first_name . ' ' . $parent->last_name;
+                }
+
+                // 🚀 Grab the most recent assessment for this student
+                $latestAssessment = $student->assessments->sortByDesc('created_at')->first();
+                $assessmentStatus = $latestAssessment ? $latestAssessment->status : 'Not Started';
+                $latestScore = $latestAssessment ? $latestAssessment->score : '-';
+                // Note: If your database uses 'total_score' instead of 'score', change it above!
+
+                fputcsv($handle, [
+                    $student->id,
+                    $student->last_name,
+                    $student->first_name,
+                    $student->middle_name,
+                    $student->section->name ?? 'Unassigned',
+                    $student->status,
+                    $assessmentStatus, // 🚀 Now uses the real data
+                    $latestScore,      // 🚀 Now uses the real data
+                    $student->date_of_birth,
+                    $parentName
+                ]);
+            }
+
+            fclose($handle);
+        });
+
+        // 7. Tell the browser this is a file download
+        $response->headers->set('Content-Type', 'text/csv');
+        $response->headers->set('Content-Disposition', 'attachment; filename="class_roster_' . now()->format('Y_m_d') . '.csv"');
+
+        return $response;
     }
 }

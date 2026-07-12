@@ -17,7 +17,8 @@ use Inertia\Inertia;
 use App\Services\EccdScoringService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\DB;
+use App\Notifications\AppNotification;
 class AssessmentController extends Controller
 {
     private function getTeacherDaycareId()
@@ -32,7 +33,6 @@ class AssessmentController extends Controller
     {
         $daycareId = $this->getTeacherDaycareId();
 
-        // 🚀 OPTIMIZATION 1: Fetch students ONCE with sections, instead of querying again at the end!
         $students = Student::with(['daycare:id,name', 'section'])
             ->where('daycare_id', $daycareId)
             ->get();
@@ -58,15 +58,16 @@ class AssessmentController extends Controller
             $dob = Carbon::parse($assessment->student->date_of_birth);
             $assessDate = Carbon::parse($assessment->assessment_date);
 
-            // 🚀 Official Boundary: Record 1 (0-36m), Record 2 (37m+)
             $ageInMonths = $dob->diffInMonths($assessDate);
             $isEccd = $ageInMonths >= 37;
 
             $assessment->form_version = $isEccd ? 'ECCD (3-5y)' : 'ITED (0-3y)';
 
             if ($isEccd) {
+                // 🚀 ONLY SUM CORE DOMAINS for the dashboard view
                 $assessment->sum_of_scaled = $assessment->scores
                     ->where('is_included', true)
+                    ->filter(fn($score) => $score->domain->is_core ?? true)
                     ->sum('scaled_score');
             } else {
                 $assessment->sum_of_scaled = null;
@@ -77,11 +78,11 @@ class AssessmentController extends Controller
 
         $domains = AssessmentDomain::where('is_active', true)
             ->orderBy('sort_order')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'is_core']);
 
         return Inertia::render('teacher/assessments-management', [
             'assessments' => $assessmentsWithNumbers,
-            'students' => $students, // 👈 Reused the memory collection here
+            'students' => $students,
             'domains' => $domains,
         ]);
     }
@@ -158,7 +159,7 @@ class AssessmentController extends Controller
 
         foreach ($domains as $domain) {
             $initialScaled = $isEccd
-                ? $scoringService->getScaledScore($domain->name, 0, $age->y, $age->m)
+                ? $scoringService->getScaledScore($domain->id, 0, $age->y, $age->m)
                 : 0;
 
             $scoresToInsert[] = [
@@ -194,7 +195,6 @@ class AssessmentController extends Controller
         $domains = AssessmentDomain::where('is_active', true)->get();
         $count = 0;
 
-        // 🚀 OPTIMIZATION 2: Pre-fetch students and existing drafts BEFORE the loop to avoid N+1 DB hits
         $studentIds = collect($request->assessments)->pluck('student_id')->unique();
         $students = Student::whereIn('id', $studentIds)->get()->keyBy('id');
 
@@ -207,11 +207,11 @@ class AssessmentController extends Controller
         foreach ($request->assessments as $data) {
             $draftKey = $data['student_id'] . '_' . $data['assessment_type'];
 
-            // Fast memory check instead of DB hit
             if (!$existingDrafts->has($draftKey)) {
                 $student = $students->get($data['student_id']);
 
-                if (!$student) continue;
+                if (!$student)
+                    continue;
 
                 $dob = Carbon::parse($student->date_of_birth);
                 $evalDate = now();
@@ -238,7 +238,7 @@ class AssessmentController extends Controller
                 $scoresToInsert = [];
                 foreach ($domains as $domain) {
                     $initialScaled = $isEccd
-                        ? $scoringService->getScaledScore($domain->name, 0, $age->y, $age->m)
+                        ? $scoringService->getScaledScore($domain->id, 0, $age->y, $age->m) // 🚀 Changed to ID
                         : 0;
 
                     $scoresToInsert[] = [
@@ -258,6 +258,8 @@ class AssessmentController extends Controller
                 }
 
                 $count++;
+
+                event(new AssessmentUpdated($assessment));
             }
         }
 
@@ -291,7 +293,6 @@ class AssessmentController extends Controller
         $totalRawScore = 0;
         $totalMaxPossible = 0;
 
-        // 🚀 OPTIMIZATION 3: Fetch all submitted scores in ONE query instead of looping DB hits
         $scoreIds = collect($validated['scores'])->pluck('id');
         $scoreRows = AssessmentScore::with('domain')
             ->where('assessment_id', $assessment->id)
@@ -310,14 +311,23 @@ class AssessmentController extends Controller
             $interpretation = '';
 
             if ($isEccd) {
+                // Ensure this is using domain_id!
                 $scaledScore = $scoringService->getScaledScore(
-                    $scoreRow->domain->name,
+                    $scoreRow->domain_id,
                     $rawScore,
                     $age->y,
                     $age->m
                 );
-                $sumScaledScores += $scaledScore;
-                $interpretation = $scoringService->getEccdDomainInterpretation($scaledScore);
+                // 🚀 CORE VS SUPPLEMENTAL ISOLATION
+                if ($scoreRow->domain->is_core) {
+                    // Only sum core domains for the standard score
+                    $sumScaledScores += $scaledScore;
+                    $interpretation = $scoringService->getEccdDomainInterpretation($scaledScore);
+                } else {
+                    // Admin custom domain: Evaluate using simple percentages
+                    $interpretation = $scoringService->getItedDomainInterpretation($rawScore, $scoreRow->max_score);
+                }
+
             } else {
                 $scaledScore = $rawScore;
                 $totalRawScore += $rawScore;
@@ -347,14 +357,35 @@ class AssessmentController extends Controller
         $assessment->update([
             'status' => $validated['status'],
             'overall_score' => $finalScore,
+            // 🚀 FIX: Actually save the sum to the database so the frontend can read it!
+            'sum_of_scaled' => $isEccd ? $sumScaledScores : null,
             'overall_rating' => $overallInterpretation,
             'completed_at' => ($validated['status'] === 'Completed' && !$assessment->completed_at) ? now() : $assessment->completed_at,
             'next_assessment_date' => $finalNextDate,
         ]);
 
-        $assessment->load('scores.domain');
+        if ($validated['status'] === 'Completed') {
 
+            // Get all parents linked to this student
+            $parents = $assessment->student->parents;
+
+            if ($parents && $parents->count() > 0) {
+                // Send the alert to every linked parent
+                foreach ($parents as $parent) {
+                    $parent->notify(new AppNotification(
+                        'assessment',
+                        'New Evaluation Available',
+                        "The developmental assessment for {$assessment->student->first_name} has been finalized.",
+                        route('parent.assessments.show', $assessment->id)
+                    ));
+                }
+            }
+        }
+
+        $assessment->load('scores.domain');
+        event(new AssessmentUpdated($assessment));
         return Redirect::back()->with('success', 'Assessment saved successfully!');
+
     }
 
     public function destroy($id)
@@ -373,7 +404,12 @@ class AssessmentController extends Controller
 
     private function redirectToForm($student, $assessmentId)
     {
-        $ageInMonths = Carbon::parse($student->date_of_birth)->diffInMonths(now());
+        // 🚀 FIX: Get the assessment to find the correct historical date
+        $assessment = Assessment::findOrFail($assessmentId);
+        $evalDate = Carbon::parse($assessment->assessment_date);
+
+        // 🚀 FIX: Calculate age based on the evaluation date, NOT today!
+        $ageInMonths = Carbon::parse($student->date_of_birth)->diffInMonths($evalDate);
 
         if ($ageInMonths <= 36) {
             return redirect()->route('teacher.assessments.ited.form', ['assessment' => $assessmentId]);
@@ -387,7 +423,12 @@ class AssessmentController extends Controller
         $assessment = Assessment::with('student', 'scores.domain')->findOrFail($assessmentId);
 
         return Inertia::render('teacher/assessments/ited-form', [
-            'assessment' => $assessment
+            'assessment' => $assessment,
+            // 🚀 PASS RULES TO REACT
+            'scoringRules' => [
+                'scale' => DB::table('eccd_scale_rules')->get(),
+                'standard' => DB::table('eccd_standard_rules')->get(),
+            ]
         ]);
     }
 
@@ -396,7 +437,12 @@ class AssessmentController extends Controller
         $assessment = Assessment::with('student', 'scores.domain')->findOrFail($assessmentId);
 
         return Inertia::render('teacher/assessments/eccd-form', [
-            'assessment' => $assessment
+            'assessment' => $assessment,
+            // 🚀 PASS RULES TO REACT
+            'scoringRules' => [
+                'scale' => DB::table('eccd_scale_rules')->get(),
+                'standard' => DB::table('eccd_standard_rules')->get(),
+            ]
         ]);
     }
 }

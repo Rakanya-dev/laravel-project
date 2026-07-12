@@ -1,11 +1,13 @@
 <?php
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\DaycareManagementController as AdminDaycareController;
 use App\Http\Controllers\Admin\SectionController as AdminSectionController;
 use App\Http\Controllers\Admin\StudentController as AdminStudentController;
 use App\Http\Controllers\Admin\UsersController as AdminUsersController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\DomainController as AdminDomainController;
 
 use App\Http\Controllers\Teacher\DashboardController as TeacherDashboardController;
 use App\Http\Controllers\Teacher\StudentController as TeacherStudentController;
@@ -29,7 +31,12 @@ Route::middleware('auth')->group(function () {
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
 });
+
 
 Route::get('/', fn() => Redirect::route('login'))->name(name: 'home');
 
@@ -72,6 +79,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/teachers/list', [AdminUsersController::class, 'getTeacherList'])->name('teachers.list');
         Route::post('/users/{id}/approve', [AdminUsersController::class, 'approveRequest'])->name('users.approve');
         Route::post('/users/{id}/reject', [AdminUsersController::class, 'rejectRequest'])->name('users.reject');
+        Route::post('/users/bulk-delete', [AdminUsersController::class, 'bulkDelete'])->name('users.bulk-delete');
+
+        Route::get('/teachers/print', [AdminUsersController::class, 'printTeachers'])->name('users.teachers.print');
+        Route::get('/parents/print', [AdminUsersController::class, 'printParents'])->name('users.parents.print');
+
         // Daycare
         Route::get('/daycare-management', [AdminDaycareController::class, 'index'])->name('daycare.index');
         Route::post('/daycare-management', [AdminDaycareController::class, 'store'])->name('daycare.store');
@@ -83,6 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Students
         Route::get('/student-management', [AdminStudentController::class, 'index'])->name('student.index');
+        Route::get('/students/print', [AdminStudentController::class, 'printAll'])->name('student.print-all');
 
         Route::get('/secure-docs/{type}/{filename}', [AdminStudentController::class, 'viewSecureDoc'])->name('secure-doc');
         // Secure Document Viewer for Admins
@@ -121,6 +134,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // The Consolidated Analytics PDF
         Route::get('/reports/consolidated-report', [AdminReportController::class, 'exportConsolidatedReport'])
             ->name('reports.consolidated-report');
+
+        // Domains
+        Route::get('/domain-management', [AdminDomainController::class, 'index'])->name('domains.index');
+        Route::post('/domain-management', [AdminDomainController::class, 'store'])->name('domains.store');
+        Route::patch('/domain-management/{id}', [AdminDomainController::class, 'update'])->name('domains.update');
+        Route::post('/domain-management/{id}/toggle-status', [AdminDomainController::class, 'toggleStatus'])->name('domains.toggle-status');
+        Route::post('/domain-management/{id}/toggle-daycare', [AdminDomainController::class, 'toggleDaycare'])->name('domains.toggle-daycare');
     });
 
     // TEACHER ROUTES
@@ -129,14 +149,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Students
         Route::get('/my-students', [TeacherStudentController::class, 'index'])->name('my-students.index');
+        Route::get('/students/print', [TeacherStudentController::class, 'printAll']);
+        Route::get('/students/export', [TeacherStudentController::class, 'export'])->name('students.export');
+
         Route::post('/students', [TeacherStudentController::class, 'store'])->name('students.store');
         Route::patch('/students/{id}', [TeacherStudentController::class, 'update'])->name('students.update');
         Route::post('/students/{id}/archive', [TeacherStudentController::class, 'archive'])->name('students.archive');
         Route::post('/students/{id}/restore', [TeacherStudentController::class, 'restore'])->name('students.restore');
         Route::post('/students/bulk-archive', [TeacherStudentController::class, 'bulkArchive'])->name('students.bulk-archive');
         Route::post('/students/bulk-restore', [TeacherStudentController::class, 'bulkRestore'])->name('students.bulk-restore');
-        Route::post('/students/{student}/regenerate-code', [TeacherStudentController::class, 'regenerateCode'])->name('students.regenerate-code');
-        Route::get('/students/print', [TeacherStudentController::class, 'printCodes'])->name('students.print-codes');
+
         Route::get('/students/{id}/consolidated-report', [TeacherStudentController::class, 'printConsolidatedReport'])->name('students.consolidated-report');
         // Printable Report
         Route::get('/students/{id}/report', [TeacherStudentController::class, 'printReport'])
@@ -185,6 +207,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/dashboard', [ParentDashboardController::class, 'index'])->name('dashboard');
 
+
+            Route::get('/assessments/{assessment}', [ParentAssessmentController::class, 'show'])->name('assessments.show');
             // 🚀 The PDF Routes for Assessments
             Route::get('/assessments/{id}/download', [ParentAssessmentController::class, 'download'])->name('assessments.download');
             Route::get('/assessments/{id}/print', [ParentAssessmentController::class, 'print'])->name('assessments.print');

@@ -39,12 +39,14 @@ import {
     Search,
     Upload,
     X,
+    XCircle,
 } from 'lucide-react';
 import { useMemo } from 'react';
+import { toast } from 'sonner';
 
-// 🚀 IMPORT NEW DATE TOOLKIT
 import { calculateAge, formatPHDate } from '@/utils/date';
-import { getAssessmentBadge, getEnrollmentBadge } from '@/utils/badges'; // 🚀 NEW
+import { getAssessmentBadge, getEnrollmentBadge } from '@/utils/badges';
+import { cn } from '@/lib/utils';
 
 export interface BaseStudent {
     id: number;
@@ -52,7 +54,7 @@ export interface BaseStudent {
     lastName: string;
     status: string;
     archived: boolean;
-    access_code?: string; // 🚀 NEW: Tell React this might exist
+    access_code?: string;
     [key: string]: any;
 }
 
@@ -99,11 +101,10 @@ interface StudentListViewProps<T extends BaseStudent> {
     onOpenArchive: (student: T) => void;
     onGraduate?: (student: T) => void;
     onProgressReport?: (student: T) => void;
-    onViewPin?: (student: T) => void; // 🚀 NEW: The click handler
+    onViewPin?: (student: T) => void;
 }
 
-// --- Helpers ---
-const formatName = (s: BaseStudent) => [s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ');
+const formatName = (s: BaseStudent) => [s.firstName, s.middleName, s.lastName].filter(Boolean).join(' ').trim();
 
 export function StudentListView<T extends BaseStudent>({
     role,
@@ -155,122 +156,144 @@ export function StudentListView<T extends BaseStudent>({
         return count;
     }, [role, filterStatus, filterDaycare, filterAssessment]);
 
-    const title = role === 'admin' ? 'Child Records' : 'My Students';
-    const subtitle = role === 'admin' ? 'Manage all children enrolled across daycare centers.' : 'Manage profiles, enrollment, and parent details.';
+    // 🚀 INVISIBLE EXCEL PRINT FUNCTION
+    const handlePrint = () => {
+        toast.loading('Generating print layout...', { id: 'print-toast' });
+
+        // 1. Build the exact URL for Laravel based on role and active filters
+        const params = new URLSearchParams({
+            search: searchQuery,
+            status: filterStatus,
+            // Only send these if they exist to keep the URL clean
+            ...(filterDaycare && filterDaycare !== 'all' ? { daycare: filterDaycare } : {}),
+            ...(filterSection && filterSection !== 'all' ? { section: filterSection } : {}),
+            ...(filterAssessment && filterAssessment !== 'all' ? { assessment: filterAssessment } : {})
+        });
+
+        // Admins hit /admin/students/print, Teachers hit /teacher/students/print
+        const basePath = role === 'admin' ? '/admin/students/print' : '/teacher/students/print';
+        const printUrl = `${basePath}?${params.toString()}`;
+
+        // 2. Create the hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = printUrl;
+
+        // 3. Trigger the print dialog instantly when Laravel returns the Blade view
+        iframe.onload = () => {
+            toast.dismiss('print-toast');
+
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+
+                // Cleanup
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 2000);
+            }, 200);
+        };
+
+        // 4. Fire!
+        document.body.appendChild(iframe);
+    };
 
     return (
         <div className="space-y-4 sm:space-y-6 transition-colors duration-200">
-            {/* Header */}
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                <div>
-                    <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white sm:text-xl md:text-2xl lg:text-3xl transition-colors">{title}</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm md:text-base transition-colors">{subtitle}</p>
-                </div>
-                <div className="flex grid grid-cols-2 items-center gap-2 sm:flex">
-                    <Button variant="outline" className="h-9 w-full gap-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:w-auto md:text-sm transition-colors" onClick={onOpenArchived}>
-                        <Clock className="size-3.5 sm:size-4" /> <span className="truncate">View Archived</span>
-                    </Button>
-                    {role === 'admin' && onOpenImport && (
-                        <Button variant="outline" className="h-9 w-full gap-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:w-auto md:text-sm transition-colors" onClick={onOpenImport}>
-                            <Upload className="size-3.5 sm:size-4" /> <span className="truncate">Import CSV</span>
-                        </Button>
-                    )}
-                </div>
-            </div>
-
-            {/* Bulk Actions Bar */}
-            {selectedStudents.size > 0 && (
-                <div className="animate-in fade-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-3 text-amber-800 dark:text-amber-400 shadow-sm transition-all sm:flex-row sm:items-center sm:py-2">
-                    <div className="flex items-center gap-2">
-                        <CheckSquare className="size-4" />
-                        <span className="text-xs font-medium sm:text-sm md:text-base">{selectedStudents.size} selected</span>
+            {role === 'teacher' && (
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white transition-colors">My Students</h2>
+                        <p className="text-base font-medium text-slate-500 dark:text-slate-400 mt-1.5 transition-colors">Manage profiles, enrollment, and parent details.</p>
                     </div>
-                    <div className="flex w-full gap-2 sm:w-auto">
+                </div>
+            )}
+
+            {selectedStudents.size > 0 && (
+                <div className="animate-in fade-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-5 py-4 text-amber-800 dark:text-amber-400 shadow-sm transition-all sm:flex-row sm:items-center sm:py-3">
+                    <div className="flex items-center gap-3">
+                        <CheckSquare className="size-5 shrink-0" />
+                        <span className="text-base font-bold sm:text-lg">{selectedStudents.size} records selected</span>
+                    </div>
+                    <div className="flex w-full gap-3 sm:w-auto">
                         <Button
                             variant="ghost"
-                            size="sm"
                             onClick={onCancelSelection}
-                            className="h-8 flex-1 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none md:text-sm transition-colors"
+                            className="h-12 px-6 rounded-xl flex-1 text-base font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none transition-colors"
                         >
-                            <X className="mr-2 size-3" /> Cancel
+                            <X className="mr-2 size-5" /> Cancel
                         </Button>
                         <Button
                             variant="outline"
-                            size="sm"
                             onClick={onOpenBulkArchive}
-                            className="h-8 flex-1 border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none md:text-sm transition-colors"
+                            className="h-12 px-6 rounded-xl flex-1 border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 shadow-sm text-base font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-900 dark:hover:text-amber-300 sm:flex-none transition-colors"
                         >
-                            <Archive className="mr-2 size-3" /> Archive Selected
+                            <Archive className="mr-2 size-5" /> Archive Selected
                         </Button>
                     </div>
                 </div>
             )}
 
-            {/* 🚀 NEW: Sleek Session Tabs for Teachers */}
             {role === 'teacher' && sectionList && onSectionChange && (
                 <div className="hide-scrollbar flex w-full overflow-x-auto border-b border-slate-200 dark:border-slate-800 transition-colors">
                     <button
-                        onClick={() => {
-                            onSectionChange('all');
-                            onPageChange(1);
-                        }}
-                        className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'all' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        onClick={() => { onSectionChange('all'); onPageChange(1); }}
+                        className={`mr-8 border-b-2 px-1 pb-4 text-base font-bold whitespace-nowrap transition-colors ${filterSection === 'all' ? 'border-indigo-600 text-indigo-700 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         All Students
                     </button>
                     {sectionList.map((sec) => (
                         <button
                             key={sec}
-                            onClick={() => {
-                                onSectionChange(sec);
-                                onPageChange(1);
-                            }}
-                            className={`mr-8 border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === sec ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                            onClick={() => { onSectionChange(sec); onPageChange(1); }}
+                            className={`mr-8 border-b-2 px-1 pb-4 text-base font-bold whitespace-nowrap transition-colors ${filterSection === sec ? 'border-indigo-600 text-indigo-700 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
                         >
                             {sec}
                         </button>
                     ))}
-                    <button
-                        onClick={() => {
-                            onSectionChange('unassigned');
-                            onPageChange(1);
-                        }}
-                        className={`border-b-2 px-1 pb-3 text-sm font-medium whitespace-nowrap transition-colors ${filterSection === 'unassigned' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-500 dark:text-indigo-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Unassigned
-                    </button>
                 </div>
             )}
 
-            {/* Table Card */}
-            <Card className="gap-0! overflow-hidden border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 py-0! shadow-sm transition-colors">
+            <Card className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors duration-200">
+
                 {/* TOOLBAR */}
-                <div className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between transition-colors">
-                    <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
-                        <div className="relative w-full sm:w-72">
-                            <Search className="absolute top-2.5 left-3 size-4 text-slate-400 dark:text-slate-500" />
+                <div className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 p-6 lg:flex-row lg:items-center lg:justify-between transition-colors">
+                    <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto lg:items-center">
+                        <div className="relative w-full sm:w-[320px]">
+                            <Search className="absolute top-1/2 -translate-y-1/2 left-4 size-5 text-slate-400 dark:text-slate-500" />
                             <Input
                                 placeholder="Search by name..."
                                 value={searchQuery}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="h-9 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 dark:text-white dark:placeholder:text-slate-500 pl-9 text-xs sm:text-sm md:text-base transition-colors"
+                                className="h-12 text-base rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 dark:text-white dark:placeholder:text-slate-500 pl-12 pr-10 font-medium shadow-sm transition-colors w-full"
                             />
+                            {searchQuery && (
+                                <button onClick={() => onSearchChange('')} className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
+                                    <XCircle className="size-5" />
+                                </button>
+                            )}
                         </div>
 
-                        {/* POPOVER FILTER */}
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="h-9 w-full border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-zinc-950 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 text-xs sm:w-auto sm:text-sm md:text-base transition-colors"
+                                    className="h-12 px-6 text-base rounded-xl w-full border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 sm:w-auto font-bold shadow-sm transition-colors"
                                 >
-                                    <Filter className="mr-2 size-3.5 sm:size-4" /> Filters
+                                    <Filter className="mr-2 size-5" /> Filters
                                     {activeFilterCount > 0 && (
                                         <>
-                                            <span className="mx-2 h-4 w-px bg-slate-200 dark:bg-slate-700"></span>
+                                            <span className="mx-2 h-6 w-px bg-slate-200 dark:bg-slate-700"></span>
                                             <Badge
                                                 variant="secondary"
-                                                className="rounded-sm bg-blue-100 dark:bg-blue-500/20 px-1.5 text-[10px] font-normal text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 md:text-xs transition-colors"
+                                                className="rounded-md bg-indigo-100 dark:bg-indigo-500/20 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 transition-colors shadow-none"
                                             >
                                                 {activeFilterCount} Active
                                             </Badge>
@@ -278,25 +301,24 @@ export function StudentListView<T extends BaseStudent>({
                                     )}
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-4 dark:bg-zinc-900 dark:border-slate-800" align="start">
-                                <div className="space-y-4">
+                            <PopoverContent className="w-80 p-6 rounded-2xl dark:bg-zinc-900 dark:border-slate-800 shadow-xl" align="start">
+                                <div className="space-y-6">
                                     <div>
-                                        <h4 className="mb-1 leading-none font-medium text-slate-900 dark:text-white">Filter Records</h4>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Narrow down your list.</p>
+                                        <h4 className="mb-1 leading-none text-xl font-black text-slate-900 dark:text-white">Filter Records</h4>
+                                        <p className="text-base font-medium text-slate-500 dark:text-slate-400 mt-1">Narrow down your list.</p>
                                     </div>
-                                    <div className="space-y-4 pt-2">
-                                        {/* Admin Only: Daycare Filter */}
+                                    <div className="space-y-5 pt-2">
                                         {role === 'admin' && onDaycareChange && daycareList && (
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Branch</Label>
+                                            <div className="space-y-2.5">
+                                                <Label className="text-[11px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">Branch</Label>
                                                 <Select value={filterDaycare} onValueChange={onDaycareChange}>
-                                                    <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
+                                                    <SelectTrigger className="h-12 text-base rounded-xl w-full font-bold dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200 transition-colors">
                                                         <SelectValue placeholder="All Branches" />
                                                     </SelectTrigger>
-                                                    <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
-                                                        <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Branches</SelectItem>
+                                                    <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800">
+                                                        <SelectItem value="all" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">All Branches</SelectItem>
                                                         {daycareList.map((d) => (
-                                                            <SelectItem key={d} value={d} className="dark:text-slate-200 dark:focus:bg-zinc-800">
+                                                            <SelectItem key={d} value={d} className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">
                                                                 {d}
                                                             </SelectItem>
                                                         ))}
@@ -305,51 +327,49 @@ export function StudentListView<T extends BaseStudent>({
                                             </div>
                                         )}
 
-                                        {/* Shared: Status Filter */}
-                                        <div className="space-y-2">
-                                            <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Enrollment Status</Label>
+                                        <div className="space-y-2.5">
+                                            <Label className="text-[11px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">Enrollment Status</Label>
                                             <Select value={filterStatus} onValueChange={onStatusChange}>
-                                                <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
+                                                <SelectTrigger className="h-12 text-base rounded-xl w-full font-bold dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200 transition-colors">
                                                     <SelectValue placeholder="All Statuses" />
                                                 </SelectTrigger>
-                                                <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
-                                                    <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Statuses</SelectItem>
-                                                    <SelectItem value="Active" className="dark:text-slate-200 dark:focus:bg-zinc-800">Active</SelectItem>
-                                                    <SelectItem value="Inactive" className="dark:text-slate-200 dark:focus:bg-zinc-800">Inactive</SelectItem>
-                                                    {role === 'teacher' && <SelectItem value="Completed" className="dark:text-slate-200 dark:focus:bg-zinc-800">Completed</SelectItem>}
+                                                <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800">
+                                                    <SelectItem value="all" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">All Statuses</SelectItem>
+                                                    <SelectItem value="Active" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Active</SelectItem>
+                                                    <SelectItem value="Inactive" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Inactive</SelectItem>
+                                                    {role === 'teacher' && <SelectItem value="Completed" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Completed</SelectItem>}
                                                 </SelectContent>
                                             </Select>
                                         </div>
 
-                                        {/* Teacher Only: Assessment Filter */}
                                         {role === 'teacher' && onAssessmentChange && (
-                                            <div className="space-y-2">
-                                                <Label className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
+                                            <div className="space-y-2.5">
+                                                <Label className="text-[11px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase">
                                                     Assessment Status
                                                 </Label>
                                                 <Select value={filterAssessment} onValueChange={onAssessmentChange}>
-                                                    <SelectTrigger className="w-full text-sm dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200">
+                                                    <SelectTrigger className="h-12 text-base rounded-xl w-full font-bold dark:bg-zinc-950 dark:border-slate-800 dark:text-slate-200 transition-colors">
                                                         <SelectValue placeholder="All Assessments" />
                                                     </SelectTrigger>
-                                                    <SelectContent className="dark:bg-zinc-900 dark:border-slate-800">
-                                                        <SelectItem value="all" className="dark:text-slate-200 dark:focus:bg-zinc-800">All Assessments</SelectItem>
-                                                        <SelectItem value="Not Started" className="dark:text-slate-200 dark:focus:bg-zinc-800">Not Started</SelectItem>
-                                                        <SelectItem value="Draft" className="dark:text-slate-200 dark:focus:bg-zinc-800">Draft</SelectItem>
-                                                        <SelectItem value="In Progress" className="dark:text-slate-200 dark:focus:bg-zinc-800">In Progress</SelectItem>
-                                                        <SelectItem value="Completed" className="dark:text-slate-200 dark:focus:bg-zinc-800">Completed</SelectItem>
+                                                    <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800">
+                                                        <SelectItem value="all" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">All Assessments</SelectItem>
+                                                        <SelectItem value="Not Started" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Not Started</SelectItem>
+                                                        <SelectItem value="Draft" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Draft</SelectItem>
+                                                        <SelectItem value="In Progress" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">In Progress</SelectItem>
+                                                        <SelectItem value="Completed" className="rounded-lg py-2.5 text-base font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">Completed</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
                                         )}
                                     </div>
                                     {activeFilterCount > 0 && (
-                                        <div className="mt-4 border-t dark:border-slate-800 pt-2">
+                                        <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-5">
                                             <Button
                                                 variant="ghost"
-                                                className="w-full text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-zinc-800"
+                                                className="h-12 rounded-xl w-full font-bold text-base text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
                                                 onClick={onClearFilters}
                                             >
-                                                <X className="mr-2 size-4" /> Clear All Filters
+                                                <X className="mr-2 size-5" /> Clear All Filters
                                             </Button>
                                         </div>
                                     )}
@@ -358,338 +378,300 @@ export function StudentListView<T extends BaseStudent>({
                         </Popover>
                     </div>
 
-                    {/* Right Side Buttons */}
-                    <div className="flex w-full flex-row items-center gap-2 lg:w-auto lg:justify-end">
-                        {role === 'teacher' && onConsolidatedReport && onAnalysisReport ? (
+                    <div className="flex w-full flex-wrap items-center gap-3 lg:w-auto lg:justify-end">
+                        <Button
+                            variant="outline"
+                            className="h-12 text-base rounded-xl flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-6 font-bold shadow-sm sm:flex-none transition-colors"
+                            onClick={onOpenArchived}
+                        >
+                            <Clock className="size-5" /> <span className="truncate">Archived</span>
+                        </Button>
+
+                        {role === 'admin' && onOpenImport && (
+                            <Button
+                                variant="outline"
+                                className="h-12 text-base rounded-xl flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-6 font-bold shadow-sm sm:flex-none transition-colors"
+                                onClick={onOpenImport}
+                            >
+                                <Upload className="size-5" /> <span className="truncate">Import</span>
+                            </Button>
+                        )}
+
+                        {/* 1. ONLY TEACHERS get the Reports Dropdown */}
+                        {role === 'teacher' && onConsolidatedReport && onAnalysisReport && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="outline"
-                                        className="h-9 flex-1 gap-1 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-2 text-xs sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
+                                        className="h-12 text-base rounded-xl flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-6 font-bold shadow-sm sm:flex-none transition-colors"
                                     >
-                                        <FileText className="size-3.5 text-slate-500 dark:text-slate-400 sm:size-4" /> <span className="truncate">Reports</span>
+                                        <FileText className="size-5 text-slate-500 dark:text-slate-400" /> <span className="truncate">Reports</span>
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56 dark:bg-zinc-900 dark:border-slate-800">
-                                    <DropdownMenuLabel className="dark:text-slate-300">Reports</DropdownMenuLabel>
-                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
-                                    <DropdownMenuItem onClick={onConsolidatedReport} className="dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">
-                                        <FileSpreadsheet className="mr-2 size-4 text-green-600 dark:text-green-500" /> Class Consolidated Record
+                                <DropdownMenuContent align="end" className="w-64 rounded-2xl dark:bg-zinc-900 dark:border-slate-800 transition-colors p-2 shadow-xl">
+                                    <DropdownMenuLabel className="dark:text-slate-400 font-bold text-[11px] uppercase tracking-widest py-2 px-3">Class Reports</DropdownMenuLabel>
+                                    <DropdownMenuSeparator className="dark:bg-slate-800 mb-2" />
+                                    <DropdownMenuItem onClick={onConsolidatedReport} className="rounded-xl text-base py-3 px-3 font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer transition-colors">
+                                        <FileSpreadsheet className="mr-3 size-5 text-emerald-600 dark:text-emerald-500" /> Consolidated Record
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={onAnalysisReport} className="dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer">
-                                        <BarChart3 className="mr-2 size-4 text-blue-600 dark:text-blue-500" /> Class Developmental Summary
+                                    <DropdownMenuItem onClick={onAnalysisReport} className="rounded-xl text-base py-3 px-3 font-bold dark:text-slate-200 dark:focus:bg-zinc-800 cursor-pointer transition-colors">
+                                        <BarChart3 className="mr-3 size-5 text-indigo-600 dark:text-indigo-500" /> Developmental Summary
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                className="h-9 flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 text-xs sm:flex-none sm:text-sm md:text-base transition-colors"
-                                onClick={onExport}
-                            >
-                                <Download className="mr-2 size-3.5 sm:size-4" /> <span className="truncate">Export</span>
-                            </Button>
                         )}
 
+                        {/* 2. EVERYONE gets the Export Button */}
+                        <Button
+                            variant="outline"
+                            className="h-12 text-base rounded-xl flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-6 font-bold shadow-sm sm:flex-none transition-colors"
+                            onClick={onExport}
+                        >
+                            <Download className="size-5" /> <span className="truncate">Export</span>
+                        </Button>
+
+                        {/* 3. EVERYONE gets the Print Button */}
+                        <Button
+                            variant="outline"
+                            className="h-12 text-base rounded-xl flex-1 gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 px-6 font-bold shadow-sm sm:flex-none transition-colors hidden sm:flex"
+                            onClick={handlePrint}
+                        >
+                            <Printer className="size-5" /> <span className="truncate">Print</span>
+                        </Button>
+
+                        {/* 4. Role-Specific Primary Add Buttons */}
                         {role === 'admin' && onOpenAdd ? (
                             <Button
-                                className="h-9 flex-1 gap-1 bg-indigo-600 dark:bg-indigo-600 px-2 text-xs text-white shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-500 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
+                                className="h-12 text-base rounded-xl flex-1 gap-2 bg-indigo-600 dark:bg-indigo-600 px-8 font-bold text-white shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-500 sm:flex-none transition-colors"
                                 onClick={onOpenAdd}
                             >
-                                <Plus className="size-3.5 sm:size-4" /> <span className="truncate">Add Student</span>
+                                <Plus className="size-5" /> <span className="truncate">Add Student</span>
                             </Button>
                         ) : role === 'teacher' && onNewAssessment ? (
                             <Button
-                                className="h-9 flex-1 gap-1 bg-slate-900 dark:bg-slate-100 px-2 text-xs text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 sm:flex-none sm:gap-2 sm:px-4 sm:text-sm md:text-base transition-colors"
+                                className="h-12 text-base rounded-xl flex-1 gap-2 bg-indigo-600 dark:bg-indigo-600 px-8 font-bold text-white shadow-sm hover:bg-indigo-700 dark:hover:bg-indigo-500 sm:flex-none transition-colors"
                                 onClick={() => onNewAssessment()}
                             >
-                                <Plus className="size-3.5 sm:size-4" /> <span className="truncate">New Assessment</span>
+                                <Plus className="size-5" /> <span className="truncate">New Assessment</span>
                             </Button>
                         ) : null}
                     </div>
                 </div>
 
-                {/* --- TABLE CONTENT --- */}
-                <CardContent className="min-h-[530px] overflow-x-auto p-0">
+                <CardContent className="min-h-[530px] overflow-x-auto p-0 custom-scrollbar">
                     <Table className="w-full min-w-[1050px] table-fixed">
-                        <TableHeader className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-900/50 transition-colors">
-                            <TableRow className="py-2 text-[10px] font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase hover:bg-transparent dark:hover:bg-transparent sm:text-xs md:text-sm">
-                                <TableHead className="w-[4%] pl-4 align-middle sm:pl-6">
+                        <TableHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 transition-colors">
+                            <TableRow className="py-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:bg-transparent dark:hover:bg-transparent">
+                                <TableHead className="w-[5%] pl-6 align-middle sm:pl-8">
                                     <Checkbox
                                         checked={filteredStudents.length > 0 && selectedStudents.size === paginatedStudents.length}
                                         onCheckedChange={onToggleAll}
                                         aria-label="Select all rows"
+                                        className="size-5 rounded-md"
                                     />
                                 </TableHead>
-
-                                <TableHead className={role === 'admin' ? 'w-[24%] align-middle' : 'w-[18%] align-middle'}>Name</TableHead>
-
-                                {role === 'teacher' && <TableHead className="w-[13%] align-middle">Session</TableHead>}
-
+                                <TableHead className={cn("py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors", role === 'admin' ? 'w-[24%] align-middle' : 'w-[18%] align-middle')}>Name</TableHead>
+                                {role === 'teacher' && <TableHead className="w-[13%] align-middle py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Session</TableHead>}
                                 {role === 'admin' ? (
-                                    <TableHead className="w-[14%] align-middle">Date of Birth</TableHead>
+                                    <TableHead className="w-[14%] align-middle py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Date of Birth</TableHead>
                                 ) : (
-                                    <TableHead className="w-[8%] align-middle whitespace-nowrap">Age</TableHead>
+                                    <TableHead className="w-[8%] align-middle whitespace-nowrap py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Age</TableHead>
                                 )}
-
-                                {role === 'admin' && <TableHead className="w-[16%] align-middle">Branch</TableHead>}
-
-                                <TableHead className={role === 'admin' ? 'w-[22%] align-middle' : 'w-[17%] align-middle'}>
-                                    Parent / Guardian
-                                </TableHead>
-
-                                <TableHead className={role === 'admin' ? 'w-[16%] align-middle' : 'w-[12%] pr-4 align-middle leading-tight'}>
-                                    Enrollment Status
-                                </TableHead>
-
+                                {role === 'admin' && <TableHead className="w-[16%] align-middle py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Branch</TableHead>}
+                                <TableHead className={cn("py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors", role === 'admin' ? 'w-[22%] align-middle' : 'w-[17%] align-middle')}>Parent / Guardian</TableHead>
+                                <TableHead className={cn("py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors", role === 'admin' ? 'w-[14%] align-middle' : 'w-[12%] pr-4 align-middle leading-tight')}>Enrollment Status</TableHead>
                                 {role === 'teacher' && (
                                     <>
-                                        <TableHead className="w-[14%] pl-2 align-middle leading-tight">Assessment Status</TableHead>
-                                        <TableHead className="w-[10%] text-right align-middle leading-tight">Latest Score</TableHead>
+                                        <TableHead className="w-[14%] pl-2 align-middle leading-tight py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Assessment Status</TableHead>
+                                        <TableHead className="w-[10%] text-right align-middle leading-tight py-5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Latest Score</TableHead>
                                     </>
                                 )}
-
-                                <TableHead className="w-[4%] pr-4 align-middle sm:pr-6"></TableHead>
+                                <TableHead className="w-[5%] pr-6 align-middle sm:pr-8"></TableHead>
                             </TableRow>
                         </TableHeader>
-
-                        <TableBody>
+                        <TableBody className="divide-y divide-slate-100 dark:divide-slate-800 transition-colors">
                             {paginatedStudents.length === 0 ? (
                                 <TableRow className="hover:bg-transparent dark:hover:bg-transparent">
-                                    <TableCell colSpan={role === 'admin' ? 7 : 9} className="h-48 text-center text-sm text-slate-500 dark:text-slate-400 md:text-base">
-                                        No student records found.
+                                    <TableCell colSpan={role === 'admin' ? 7 : 9} className="h-64 text-center">
+                                        <div className="flex flex-col items-center justify-center py-24 px-4">
+                                            <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800 p-6 shadow-sm border border-slate-200 dark:border-slate-700 transition-colors mb-5">
+                                                <Search className="size-10 text-slate-400 dark:text-slate-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-2xl font-black text-slate-900 dark:text-white transition-colors">No student records found</p>
+                                                <p className="mt-2 text-base font-medium text-slate-500 dark:text-slate-400 transition-colors">Try adjusting your filters or search query.</p>
+                                            </div>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                paginatedStudents.map((student) => (
-                                    <TableRow
-                                        key={student.id}
-                                        className={`group transition-colors hover:bg-slate-50 dark:hover:bg-zinc-800/50 ${selectedStudents.has(student.id) ? 'bg-indigo-50/40 dark:bg-indigo-500/10' : ''}`}
-                                    >
-                                        <TableCell className="py-2 pl-4 sm:py-3 sm:pl-6">
-                                            <Checkbox
-                                                checked={selectedStudents.has(student.id)}
-                                                onCheckedChange={() => onToggleStudent(student.id)}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="py-2 sm:py-3">
-                                            <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
-                                                <div className="flex size-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-sm shadow-inner shrink-0 transition-colors">
-                                                    {student.firstName?.[0] || student.firstName?.[0] || ''}{student.last_name?.[0] || student.lastName?.[0] || ''}
-                                                </div>
-                                                <button
-                                                    onClick={() => onOpenDetail(student)}
-                                                    className="truncate text-left text-xs font-medium text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline sm:text-sm md:text-base transition-colors"
-                                                >
-                                                    {formatName(student)}
-                                                </button>
-                                            </div>
-                                        </TableCell>
+                                paginatedStudents.map((student) => {
+                                    const firstInitial = student.firstName?.charAt(0) || '';
+                                    const lastInitial = student.lastName?.charAt(0) || '';
+                                    const initials = (firstInitial + lastInitial).toUpperCase();
 
-                                        {role === 'teacher' && (
-                                            <TableCell className="py-2 sm:py-3">
-                                                <div
-                                                    className="truncate text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm md:text-base transition-colors"
-                                                    title={student.section_name}
-                                                >
-                                                    {student.section_name || (
-                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 italic sm:text-xs md:text-sm">Unassigned</span>
-                                                    )}
-                                                </div>
+                                    return (
+                                        <TableRow
+                                            key={student.id}
+                                            className={`group transition-colors duration-200 hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 h-[88px] border-slate-100 dark:border-slate-800 ${selectedStudents.has(student.id) ? 'bg-indigo-50/40 dark:bg-indigo-500/10' : ''}`}
+                                        >
+                                            <TableCell className="py-4 pl-6 sm:py-5 sm:pl-8">
+                                                <Checkbox
+                                                    checked={selectedStudents.has(student.id)}
+                                                    onCheckedChange={() => onToggleStudent(student.id)}
+                                                    className="size-5 rounded-md"
+                                                />
                                             </TableCell>
-                                        )}
-
-                                        {role === 'admin' ? (
-                                            <TableCell className="py-2 text-xs text-slate-600 dark:text-slate-300 sm:py-3 sm:text-sm md:text-base transition-colors">
-                                                {formatPHDate(student.dateOfBirth)}
-                                            </TableCell>
-                                        ) : (
-                                            <TableCell className="py-2 text-xs font-medium text-slate-600 dark:text-slate-300 sm:py-3 sm:text-sm md:text-base transition-colors">
-                                                {calculateAge(student.dateOfBirth)} yrs
-                                            </TableCell>
-                                        )}
-
-                                        {role === 'admin' && (
-                                            <TableCell className="py-2 sm:py-3">
-                                                <div
-                                                    className="truncate text-xs font-medium text-indigo-600 dark:text-indigo-400 sm:text-sm md:text-base transition-colors"
-                                                    title={student.daycare || '-'}
-                                                >
-                                                    {student.daycare || '-'}
-                                                </div>
-                                            </TableCell>
-                                        )}
-
-                                        <TableCell className="overflow-hidden py-2 sm:py-3">
-                                            {student.parentName || student.parentLinked ? (
-                                                <div className="flex flex-col">
-                                                    <span
-                                                        className="truncate text-xs font-medium text-slate-900 dark:text-slate-100 sm:text-sm md:text-base transition-colors"
-                                                        title={student.parentName}
+                                            <TableCell className="py-4 sm:py-5">
+                                                <div className="flex items-center gap-4 overflow-hidden">
+                                                    <Avatar className="size-14 shadow-sm border border-indigo-100 dark:border-indigo-500/30 transition-colors rounded-2xl shrink-0">
+                                                        <AvatarFallback className="bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-black text-lg rounded-2xl">
+                                                            {initials}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <button
+                                                        onClick={() => onOpenDetail(student)}
+                                                        className="truncate text-left text-lg font-black text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                                                     >
-                                                        {student.parentName || 'Linked Parent'}
-                                                    </span>
-                                                    {student.parentEmail && (
-                                                        <span
-                                                            className="truncate text-[10px] text-slate-500 dark:text-slate-400 sm:text-xs md:text-sm transition-colors"
-                                                            title={student.parentEmail}
-                                                        >
-                                                            {student.parentEmail}
-                                                        </span>
-                                                    )}
+                                                        {formatName(student)}
+                                                    </button>
                                                 </div>
-                                            ) : (
-                                                <Badge
-                                                    variant="outline"
-                                                    className="w-fit border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800/50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 sm:px-2 sm:text-[11px] md:text-xs transition-colors"
-                                                >
-                                                    Unlinked
-                                                </Badge>
-                                            )}
-                                        </TableCell>
+                                            </TableCell>
 
-                                        <TableCell className={role === 'teacher' ? 'py-2 pr-4 sm:py-3' : 'py-2 sm:py-3'}>
-                                            {getEnrollmentBadge(student.status)}
-                                        </TableCell>
-
-                                        {role === 'teacher' && (
-                                            <>
-                                                <TableCell className="py-2 pl-2 sm:py-3">{getAssessmentBadge(student.assessmentStatus)}</TableCell>
-                                                <TableCell className="py-2 text-right sm:py-3">
-                                                    {student.score ? (
-                                                        <span className="inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 text-xs font-bold text-slate-700 dark:text-slate-300 sm:px-2.5 sm:text-sm md:text-base transition-colors">
-                                                            {student.score}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400 dark:text-slate-500 sm:text-sm md:text-base transition-colors">-</span>
-                                                    )}
+                                            {role === 'teacher' && (
+                                                <TableCell className="py-4 sm:py-5">
+                                                    <div className="truncate text-base font-bold text-slate-700 dark:text-slate-300 transition-colors" title={student.section_name}>
+                                                        {student.section_name || <span className="text-[11px] font-bold tracking-widest uppercase text-slate-400 dark:text-slate-500 italic">Unassigned</span>}
+                                                    </div>
                                                 </TableCell>
-                                            </>
-                                        )}
+                                            )}
 
-                                        <TableCell className="py-2 pr-4 text-right sm:py-3 sm:pr-6">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-7 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white sm:size-8 transition-colors"
-                                                    >
-                                                        <MoreHorizontal className="size-3.5 sm:size-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 dark:bg-zinc-900 dark:border-slate-800">
-                                                    <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
-                                                        Manage Record
-                                                    </DropdownMenuLabel>
-                                                    {role === 'admin' && student.access_code && onViewPin && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => onViewPin(student)}
-                                                            className="mb-1 cursor-pointer bg-indigo-50/50 dark:bg-indigo-500/10 font-medium text-indigo-600 dark:text-indigo-400 dark:focus:bg-zinc-800 transition-colors"
-                                                        >
-                                                            <Key className="mr-2 size-4" /> View Parent PIN
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
-                                                    {role === 'teacher' &&
-                                                        onNewAssessment &&
-                                                        !(
-                                                            student.status === 'Completed' ||
-                                                            student.status === 'Graduated' ||
-                                                            student.canGraduate
-                                                        ) && (
-                                                            <DropdownMenuItem onClick={() => onNewAssessment(student.id)} className="cursor-pointer dark:text-slate-200 dark:focus:bg-zinc-800">
-                                                                {student.assessmentStatus === 'Draft' ||
-                                                                    student.assessmentStatus === 'In Progress' ? (
-                                                                    <>
-                                                                        <PlayCircle className="mr-2 size-4 text-amber-500 dark:text-amber-400" /> Resume Assessment
-                                                                    </>
+                                            {role === 'admin' ? (
+                                                <TableCell className="py-4 text-base font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                                                    {formatPHDate(student.dateOfBirth)}
+                                                </TableCell>
+                                            ) : (
+                                                <TableCell className="py-4 text-base font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                                                    {calculateAge(student.dateOfBirth)} yrs
+                                                </TableCell>
+                                            )}
+
+                                            {role === 'admin' && (
+                                                <TableCell className="py-4 sm:py-5">
+                                                    <div className="truncate text-base font-bold text-indigo-600 dark:text-indigo-400 transition-colors" title={student.daycare || '-'}>
+                                                        {student.daycare || '-'}
+                                                    </div>
+                                                </TableCell>
+                                            )}
+
+                                            <TableCell className="overflow-hidden py-4 sm:py-5">
+                                                {student.parentName || student.parentLinked ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="truncate text-base font-bold text-slate-900 dark:text-slate-100 transition-colors" title={student.parentName}>
+                                                            {student.parentName || 'Linked Parent'}
+                                                        </span>
+                                                        {student.parentEmail && (
+                                                            <span className="truncate text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 transition-colors" title={student.parentEmail}>
+                                                                {student.parentEmail}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <Badge variant="outline" className="w-fit border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800/50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors shadow-none">
+                                                        Unlinked
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+
+                                            <TableCell className={cn(role === 'teacher' ? 'py-4 pr-5 sm:py-5' : 'py-4 sm:py-5')}>
+                                                {getEnrollmentBadge(student.status)}
+                                            </TableCell>
+
+                                            {role === 'teacher' && (
+                                                <>
+                                                    <TableCell className="py-4 pl-2 sm:py-5">{getAssessmentBadge(student.assessmentStatus)}</TableCell>
+                                                    <TableCell className="py-4 text-right sm:py-5">
+                                                        {student.score ? (
+                                                            <span className="inline-flex items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-800 px-3.5 py-1.5 text-lg font-black text-slate-700 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700">
+                                                                {student.score}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-lg font-medium text-slate-400 dark:text-slate-500 transition-colors">-</span>
+                                                        )}
+                                                    </TableCell>
+                                                </>
+                                            )}
+
+                                            <TableCell className="py-4 pr-6 text-right sm:py-5 sm:pr-8">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="size-12 rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors">
+                                                            <MoreHorizontal className="size-6" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-64 p-2 rounded-2xl dark:bg-zinc-900 dark:border-slate-800 transition-colors shadow-xl">
+                                                        <DropdownMenuLabel className="text-[11px] font-bold tracking-widest text-slate-500 dark:text-slate-400 uppercase py-2 px-3">Manage Record</DropdownMenuLabel>
+                                                        {role === 'admin' && student.access_code && onViewPin && (
+                                                            <DropdownMenuItem onClick={() => onViewPin(student)} className="mb-2 py-3 px-3 rounded-xl cursor-pointer bg-indigo-50 dark:bg-indigo-500/10 text-base font-bold text-indigo-600 dark:text-indigo-400 dark:focus:bg-zinc-800 transition-colors">
+                                                                <Key className="mr-3 size-5" /> View Parent PIN
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuSeparator className="dark:bg-slate-800 mb-1" />
+                                                        {role === 'teacher' && onNewAssessment && !(student.status === 'Completed' || student.status === 'Graduated' || student.canGraduate) && (
+                                                            <DropdownMenuItem onClick={() => onNewAssessment(student.id)} className="cursor-pointer py-3 px-3 text-base rounded-xl font-bold dark:text-slate-200 dark:focus:bg-zinc-800 transition-colors">
+                                                                {student.assessmentStatus === 'Draft' || student.assessmentStatus === 'In Progress' ? (
+                                                                    <><PlayCircle className="mr-3 size-5 text-amber-500 dark:text-amber-400" /> Resume Assessment</>
                                                                 ) : (
-                                                                    <>
-                                                                        <PlusCircle className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> Start New Assessment
-                                                                    </>
+                                                                    <><PlusCircle className="mr-3 size-5 text-indigo-600 dark:text-indigo-400" /> Start New Assessment</>
                                                                 )}
                                                             </DropdownMenuItem>
                                                         )}
-
-                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
-
-                                                    <DropdownMenuItem onClick={() => onOpenDetail(student)} className="cursor-pointer text-sm dark:text-slate-200 dark:focus:bg-zinc-800">
-                                                        <Eye className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> View Profile
-                                                    </DropdownMenuItem>
-
-                                                    {role === 'teacher' && onProgressReport && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => onProgressReport(student)}
-                                                            className="cursor-pointer text-sm text-blue-600 dark:text-blue-400 dark:focus:bg-zinc-800"
-                                                        >
-                                                            <Printer className="mr-2 size-4" /> Progress Report
+                                                        <DropdownMenuSeparator className="dark:bg-slate-800 my-1" />
+                                                        <DropdownMenuItem onClick={() => onOpenDetail(student)} className="cursor-pointer py-3 px-3 text-base rounded-xl font-bold dark:text-slate-200 dark:focus:bg-zinc-800 transition-colors">
+                                                            <Eye className="mr-3 size-5 text-slate-500 dark:text-slate-400" /> View Profile
                                                         </DropdownMenuItem>
-                                                    )}
-
-                                                    <DropdownMenuItem onClick={() => onOpenEdit(student)} className="cursor-pointer text-sm dark:text-slate-200 dark:focus:bg-zinc-800">
-                                                        <Edit className="mr-2 size-4 text-slate-500 dark:text-slate-400" /> Edit Details
-                                                    </DropdownMenuItem>
-
-                                                    <DropdownMenuSeparator className="dark:bg-slate-800" />
-
-                                                    {role === 'teacher' && onGraduate && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => onGraduate(student)}
-                                                            disabled={!student.canGraduate}
-                                                            className={
-                                                                !student.canGraduate
-                                                                    ? 'cursor-not-allowed text-sm text-slate-400 dark:text-slate-600 opacity-60'
-                                                                    : 'cursor-pointer text-sm text-purple-600 dark:text-purple-400 dark:focus:bg-zinc-800'
-                                                            }
-                                                        >
-                                                            <GraduationCap className="mr-2 size-4" />
-                                                            {student.canGraduate ? 'Graduate Student' : 'Cannot Graduate Yet'}
+                                                        {role === 'teacher' && onProgressReport && (
+                                                            <DropdownMenuItem onClick={() => onProgressReport(student)} className="cursor-pointer py-3 px-3 text-base rounded-xl font-bold text-blue-600 dark:text-blue-400 dark:focus:bg-zinc-800 transition-colors">
+                                                                <Printer className="mr-3 size-5" /> Progress Report
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onClick={() => onOpenEdit(student)} className="cursor-pointer py-3 px-3 text-base rounded-xl font-bold dark:text-slate-200 dark:focus:bg-zinc-800 transition-colors">
+                                                            <Edit className="mr-3 size-5 text-slate-500 dark:text-slate-400" /> Edit Details
                                                         </DropdownMenuItem>
-                                                    )}
-
-                                                    <DropdownMenuItem
-                                                        onClick={() => onOpenArchive(student)}
-                                                        className="cursor-pointer text-sm text-amber-600 dark:text-amber-500 dark:focus:bg-zinc-800"
-                                                    >
-                                                        <Archive className="mr-2 size-4" /> Archive Record
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                                        <DropdownMenuSeparator className="dark:bg-slate-800 my-1" />
+                                                        {role === 'teacher' && onGraduate && (
+                                                            <DropdownMenuItem onClick={() => onGraduate(student)} disabled={!student.canGraduate} className={!student.canGraduate ? 'cursor-not-allowed py-3 px-3 text-base rounded-xl font-bold text-slate-400 dark:text-slate-600 opacity-60' : 'cursor-pointer py-3 px-3 text-base rounded-xl font-bold text-purple-600 dark:text-purple-400 dark:focus:bg-zinc-800 transition-colors'}>
+                                                                <GraduationCap className="mr-3 size-5" />
+                                                                {student.canGraduate ? 'Graduate Student' : 'Cannot Graduate Yet'}
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem onClick={() => onOpenArchive(student)} className="cursor-pointer py-3 px-3 text-base rounded-xl font-bold text-amber-600 dark:text-amber-500 dark:focus:bg-zinc-800 transition-colors">
+                                                            <Archive className="mr-3 size-5" /> Archive Record
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>
                 </CardContent>
 
-                {/* --- PAGINATION --- */}
                 {filteredStudents.length > 0 && (
-                    <div className="flex flex-col items-center justify-between gap-3 rounded-b-xl border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 p-3 sm:flex-row sm:px-6 sm:py-4 transition-colors">
-                        <div className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm md:text-base transition-colors">
-                            Showing <span className="font-medium text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                            <span className="font-medium text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
-                            <span className="font-medium text-slate-900 dark:text-white">{filteredStudents.length}</span> records
+                    <div className="flex flex-col items-center justify-between gap-4 rounded-b-3xl border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 p-6 sm:flex-row sm:px-8 transition-colors">
+                        <div className="text-base font-medium text-slate-500 dark:text-slate-400 transition-colors">
+                            Showing <span className="font-bold text-slate-900 dark:text-white">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                            <span className="font-bold text-slate-900 dark:text-white">{Math.min(currentPage * itemsPerPage, filteredStudents.length)}</span> of{' '}
+                            <span className="font-bold text-slate-900 dark:text-white">{filteredStudents.length}</span> records
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onPageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 px-2 text-xs sm:px-3 md:text-sm transition-colors"
-                            >
-                                <ChevronLeft className="size-4" />
+                        <div className="flex items-center gap-3">
+                            <Button variant="outline" size="icon" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage === 1} className="h-12 w-12 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors">
+                                <ChevronLeft className="size-6" />
                             </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onPageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="h-8 border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 px-2 text-xs sm:px-3 md:text-sm transition-colors"
-                            >
-                                <ChevronRight className="size-4" />
+                            <Button variant="outline" size="icon" onClick={() => onPageChange(currentPage + 1)} disabled={currentPage === totalPages} className="h-12 w-12 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors">
+                                <ChevronRight className="size-6" />
                             </Button>
                         </div>
                     </div>

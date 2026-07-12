@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Check, CheckCircle2, Copy, Eye, FileText, UserCheck, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, Copy, Eye, FileText, UserCheck, XCircle, Users } from 'lucide-react';
 
 import { AddEditStudentDialog } from '@/components/admin/add-edit-student-dialog';
 import { ImportStudentsDialog } from '@/components/admin/import-students-dialog';
@@ -17,7 +17,6 @@ import { ArchivedStudentsDialog } from '@/components/shared/archived-students-di
 import { RestoreStudentDialog } from '@/components/shared/restore-student-dialog';
 import { StudentListView } from '@/components/shared/student-list-view';
 
-// 🚀 NEW: Import your brand new, bulletproof date toolkit!
 import { calculateAge, formatForInput, formatPHDate } from '@/utils/date';
 import { cn } from '@/lib/utils';
 
@@ -180,6 +179,10 @@ export default function StudentManagement() {
     const [reviewingEnrollment, setReviewingEnrollment] = useState<PendingEnrollment | null>(null);
     const [selectedSectionId, setSelectedSectionId] = useState<string>('');
     const [isReviewOpen, setIsReviewOpen] = useState(false);
+
+    // 🚀 NEW STATE: Handles the rejection logic seamlessly
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
 
     useEffect(() => {
         setAllStudents(rawStudents.map(transformStudent));
@@ -483,14 +486,23 @@ export default function StudentManagement() {
         );
     };
 
+    // 🚀 NEW: Opens the Rejection UI
+    const openRejectDialog = () => {
+        setRejectReason('');
+        setIsRejectDialogOpen(true);
+    };
+
+    // 🚀 NEW: Submits the Rejection WITH the reason string
     const handleRejectEnrollment = () => {
-        if (!confirm('Are you sure you want to reject this application? The documents will be deleted.')) return;
+        if (!rejectReason.trim()) return toast.error('You must provide a reason for the rejection.');
+
         router.post(
             route('admin.enrollments.reject', reviewingEnrollment!.id),
-            {},
+            { reason: rejectReason }, // Passed directly to your backend controller
             {
                 onSuccess: () => {
                     toast.success('Application rejected.');
+                    setIsRejectDialogOpen(false);
                     setIsReviewOpen(false);
                 },
                 preserveScroll: true,
@@ -624,17 +636,31 @@ export default function StudentManagement() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Student Management" />
-            <div className="p-4 sm:p-6 lg:p-8 transition-colors duration-200">
+
+            <div className="flex-1 p-6 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 transition-colors">
+
+                {/* MATCHING HEADER STRUCTURE */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3 transition-colors">
+                            Student Management
+                        </h2>
+                        <p className="text-base font-medium text-slate-500 dark:text-slate-400 mt-1.5 transition-colors">
+                            Manage your active roster, review pending enrollments, and access student records.
+                        </p>
+                    </div>
+                </div>
+
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <div className="mb-6 flex items-center justify-between">
-                        <TabsList className="grid w-[400px] grid-cols-2 dark:bg-zinc-900 transition-colors">
-                            <TabsTrigger value="roster" className="dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white">
-                                <UserCheck className="mr-2 h-4 w-4" /> Active Roster
+                        <TabsList className="grid w-full sm:w-[480px] h-14 grid-cols-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-slate-800 shadow-sm p-1.5 rounded-2xl transition-colors">
+                            <TabsTrigger value="roster" className="text-base data-[state=active]:bg-indigo-50 dark:data-[state=active]:bg-indigo-500/10 data-[state=active]:text-indigo-700 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-none font-bold h-full rounded-xl transition-colors">
+                                <UserCheck className="mr-2 h-5 w-5" /> Active Roster
                             </TabsTrigger>
-                            <TabsTrigger value="pending" className="relative dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white">
-                                <FileText className="mr-2 h-4 w-4" /> Pending Enrollments
+                            <TabsTrigger value="pending" className="text-base relative dark:data-[state=active]:bg-zinc-800 dark:data-[state=active]:text-white data-[state=active]:shadow-none font-bold h-full rounded-xl transition-colors">
+                                <FileText className="mr-2 h-5 w-5" /> Pending
                                 {pendingList.length > 0 && (
-                                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white shadow-sm border-2 border-white dark:border-zinc-900">
                                         {pendingList.length}
                                     </span>
                                 )}
@@ -676,49 +702,52 @@ export default function StudentManagement() {
                     </TabsContent>
 
                     <TabsContent value="pending" className="mt-0 border-none p-0 outline-none">
-                        <div className="rounded-xl border border-neutral-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors">
-                            <div className="p-6">
-                                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Applications Awaiting Review</h2>
-                                <p className="mb-6 text-sm text-neutral-500 dark:text-slate-400">
+                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm transition-colors">
+                            <div className="p-6 sm:p-8">
+                                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Applications Awaiting Review</h2>
+                                <p className="mb-6 text-base font-medium text-slate-500 dark:text-slate-400 mt-2">
                                     Verify parent documents and assign students to their specific Daycare Sections.
                                 </p>
                                 {pendingList.length === 0 ? (
-                                    <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-neutral-200 dark:border-slate-800 bg-neutral-50 dark:bg-zinc-950 transition-colors">
-                                        <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-400 dark:text-emerald-500" />
-                                        <span className="font-medium text-neutral-600 dark:text-slate-300">All caught up!</span>
-                                        <p className="text-sm text-neutral-500 dark:text-slate-500">No pending enrollments right now.</p>
+                                    <div className="flex h-[400px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950/50 transition-colors">
+                                        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl mb-5 shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+                                            <CheckCircle2 className="h-10 w-10 text-emerald-500 dark:text-emerald-400" />
+                                        </div>
+                                        <span className="text-2xl font-black text-slate-900 dark:text-white transition-colors">All caught up!</span>
+                                        <p className="text-base font-medium text-slate-500 dark:text-slate-400 mt-2 transition-colors">No pending enrollments right now.</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-left text-sm text-neutral-600 dark:text-slate-300">
-                                            <thead className="border-b border-neutral-200 dark:border-slate-800 bg-neutral-50 dark:bg-zinc-900/50 text-xs text-neutral-500 dark:text-slate-400 uppercase transition-colors">
+                                    <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 transition-colors custom-scrollbar">
+                                        <table className="w-full text-left text-base text-slate-600 dark:text-slate-300">
+                                            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">
                                                 <tr>
-                                                    <th className="px-6 py-3 font-semibold">Child Name</th>
-                                                    <th className="px-6 py-3 font-semibold">Age</th>
-                                                    <th className="px-6 py-3 font-semibold">Applied Daycare</th>
-                                                    <th className="px-6 py-3 font-semibold">Submitted By</th>
-                                                    <th className="px-6 py-3 text-right font-semibold">Actions</th>
+                                                    <th className="px-6 py-4">Child Name</th>
+                                                    <th className="px-6 py-4">Age</th>
+                                                    <th className="px-6 py-4">Applied Daycare</th>
+                                                    <th className="px-6 py-4">Submitted By</th>
+                                                    <th className="px-6 py-4 text-right">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-neutral-100 dark:divide-slate-800 bg-white dark:bg-zinc-900 transition-colors">
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-zinc-900 transition-colors">
                                                 {pendingList.map((enrollment) => (
-                                                    <tr key={enrollment.id} className="hover:bg-neutral-50/50 dark:hover:bg-zinc-800/50 transition-colors">
-                                                        <td className="px-6 py-4 font-medium text-neutral-900 dark:text-white">
+                                                    <tr key={enrollment.id} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors">
+                                                        <td className="px-6 py-5 text-base font-bold text-slate-900 dark:text-white transition-colors">
                                                             {enrollment.last_name}, {enrollment.first_name}
                                                         </td>
-                                                        <td className="px-6 py-4">{calculateAge(enrollment.date_of_birth)} yrs</td>
-                                                        <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400">{enrollment.daycare.name}</td>
-                                                        <td className="px-6 py-4">
-                                                            {enrollment.user.first_name} {enrollment.user.last_name}
-                                                            <div className="text-xs text-neutral-400 dark:text-slate-500">{enrollment.user.email}</div>
+                                                        <td className="px-6 py-5 text-base font-medium transition-colors">{calculateAge(enrollment.date_of_birth)} yrs</td>
+                                                        <td className="px-6 py-5 text-base font-bold text-indigo-600 dark:text-indigo-400 transition-colors">{enrollment.daycare.name}</td>
+                                                        <td className="px-6 py-5">
+                                                            <div className="text-base font-bold text-slate-800 dark:text-slate-200 transition-colors">
+                                                                {enrollment.user.first_name} {enrollment.user.last_name}
+                                                            </div>
+                                                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400 transition-colors">{enrollment.user.email}</div>
                                                         </td>
-                                                        <td className="px-6 py-4 text-right">
+                                                        <td className="px-6 py-5 text-right">
                                                             <Button
                                                                 onClick={() => openReviewModal(enrollment)}
-                                                                size="sm"
-                                                                className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white transition-colors"
+                                                                className="h-12 px-6 rounded-xl text-base bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white font-bold shadow-sm transition-colors"
                                                             >
-                                                                <Eye className="mr-2 h-4 w-4" /> Review Docs
+                                                                <Eye className="mr-2 h-5 w-5" /> Review Docs
                                                             </Button>
                                                         </td>
                                                     </tr>
@@ -732,113 +761,114 @@ export default function StudentManagement() {
                     </TabsContent>
                 </Tabs>
 
+                {/* 🚀 MODALS START HERE */}
+
+                {/* 1. Review Application Modal */}
                 <Dialog open={isReviewOpen} onOpenChange={setIsReviewOpen}>
-                    <DialogContent className="max-h-[95vh] sm:max-w-[900px] p-0 overflow-hidden bg-slate-50 dark:bg-zinc-950 border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200">
+                    <DialogContent hideClose className="sm:max-w-[1000px] p-0 overflow-hidden bg-white dark:bg-zinc-950 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200 flex flex-col max-h-[90vh]">
                         {/* --- HEADER --- */}
-                        <div className="bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 p-6 shadow-sm relative z-10 transition-colors">
-                            <div className="flex items-center gap-4">
-                                <div className="flex size-14 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/30 shadow-sm transition-colors">
-                                    <FileText className="size-7" />
+                        <div className="bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-sm relative z-10 transition-colors shrink-0 text-left">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 transition-colors">
+                                    <FileText className="size-6" strokeWidth={2.5} />
                                 </div>
-                                <div>
-                                    <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">Review Application</DialogTitle>
-                                    <DialogDescription className="text-slate-500 dark:text-slate-400 font-medium transition-colors">
-                                        Verification of documents and classroom placement.
-                                    </DialogDescription>
-                                </div>
+                                <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">Review Application</DialogTitle>
                             </div>
+                            <DialogDescription className="text-slate-500 dark:text-slate-400 text-base font-medium transition-colors mt-2 leading-relaxed">
+                                Verification of documents and classroom placement.
+                            </DialogDescription>
                         </div>
 
                         {reviewingEnrollment && (
-                            <div className="overflow-y-auto max-h-[calc(95vh-180px)] scrollbar-thin dark:scrollbar-thumb-zinc-700 transition-colors">
-                                <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar transition-colors">
+                                <div className="p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                                     {/* LEFT SIDE: Document Previews (7 columns) */}
                                     <div className="lg:col-span-7 space-y-6">
-                                        <h4 className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2 transition-colors">
-                                            <Eye className="size-3" /> Submitted Proofs
+                                        <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2 transition-colors">
+                                            <Eye className="size-4" /> Submitted Proofs
                                         </h4>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                             {/* Birth Certificate */}
-                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
-                                                <p className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors">PSA Birth Certificate</p>
+                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-4 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-700">
+                                                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">PSA Birth Certificate</p>
                                                 <a
                                                     href={getSecureUrl(reviewingEnrollment.birth_cert_path)}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
+                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
                                                 >
                                                     <img
                                                         src={getSecureUrl(reviewingEnrollment.birth_cert_path)}
                                                         alt="Birth Certificate"
-                                                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).style.display = 'none';
                                                             e.currentTarget.parentElement!.innerHTML =
-                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-2 transition-colors"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
+                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-3 transition-colors"><FileText class="size-10 opacity-40" /><span class="text-sm font-bold underline">View PDF Document</span></div>';
                                                         }}
                                                     />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                                        <div className="bg-white/90 dark:bg-zinc-900/90 dark:text-white opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-all uppercase tracking-wider">Expand Document</div>
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                        <div className="bg-white dark:bg-zinc-900 dark:text-white opacity-0 group-hover:opacity-100 px-5 py-2.5 rounded-xl text-[11px] font-bold shadow-lg transition-all uppercase tracking-widest">Expand Document</div>
                                                     </div>
                                                 </a>
                                             </div>
 
                                             {/* Parent ID */}
-                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-3 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
-                                                <p className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300 transition-colors">Valid Parent ID</p>
+                                            <div className="group relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-4 shadow-sm transition-all hover:border-indigo-300 dark:hover:border-indigo-700">
+                                                <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Valid Parent ID</p>
                                                 <a
                                                     href={getSecureUrl(reviewingEnrollment.parent_id_path)}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-100 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
+                                                    className="block relative aspect-[3/4] overflow-hidden rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-100 dark:border-slate-800 transition-colors"
                                                 >
                                                     <img
                                                         src={getSecureUrl(reviewingEnrollment.parent_id_path)}
                                                         alt="Parent ID"
-                                                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).style.display = 'none';
                                                             e.currentTarget.parentElement!.innerHTML =
-                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-2 transition-colors"><FileText class="size-8 opacity-40" /><span class="text-xs font-bold underline">View PDF Document</span></div>';
+                                                                '<div class="flex flex-col h-full items-center justify-center bg-slate-50 dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400 gap-3 transition-colors"><FileText class="size-10 opacity-40" /><span class="text-sm font-bold underline">View PDF Document</span></div>';
                                                         }}
                                                     />
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                                        <div className="bg-white/90 dark:bg-zinc-900/90 dark:text-white opacity-0 group-hover:opacity-100 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg transition-all uppercase tracking-wider">Expand Document</div>
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 dark:group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                                        <div className="bg-white dark:bg-zinc-900 dark:text-white opacity-0 group-hover:opacity-100 px-5 py-2.5 rounded-xl text-[11px] font-bold shadow-lg transition-all uppercase tracking-widest">Expand Document</div>
                                                     </div>
                                                 </a>
                                             </div>
                                         </div>
-                                        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center italic transition-colors">Documents are encrypted and will be automatically purged upon approval/rejection.</p>
+                                        <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 text-center italic transition-colors">Documents are encrypted and will be automatically purged upon approval/rejection.</p>
                                     </div>
 
                                     {/* RIGHT SIDE: Application Details (5 columns) */}
                                     <div className="lg:col-span-5 space-y-6">
-                                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-5 shadow-sm space-y-4 transition-colors">
-                                            <h4 className="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-[0.2em] border-b border-slate-50 dark:border-slate-800 pb-3 transition-colors">
+                                        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 p-6 sm:p-8 shadow-sm space-y-6 transition-colors">
+                                            <h4 className="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-3 transition-colors">
                                                 Identity Details
                                             </h4>
 
-                                            <div className="space-y-3">
+                                            <div className="space-y-5">
                                                 <div>
-                                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Learner Name</p>
-                                                    <p className="text-base font-extrabold text-slate-900 dark:text-white transition-colors">{reviewingEnrollment.first_name} {reviewingEnrollment.last_name}</p>
+                                                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">Learner Name</p>
+                                                    <p className="text-xl font-black text-slate-900 dark:text-white mt-1 transition-colors">{reviewingEnrollment.first_name} {reviewingEnrollment.last_name}</p>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-2 gap-5">
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Birthday</p>
-                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{formatPHDate(reviewingEnrollment.date_of_birth)}</p>
+                                                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">Birthday</p>
+                                                        <p className="text-base font-bold text-slate-800 dark:text-slate-200 mt-1 transition-colors">{formatPHDate(reviewingEnrollment.date_of_birth)}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Gender</p>
-                                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 transition-colors">{reviewingEnrollment.gender}</p>
+                                                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">Gender</p>
+                                                        <p className="text-base font-bold text-slate-800 dark:text-slate-200 mt-1 transition-colors">{reviewingEnrollment.gender}</p>
                                                     </div>
                                                 </div>
-                                                <div className="pt-2 border-t border-slate-50 dark:border-slate-800 transition-colors">
-                                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider transition-colors">Submitted By (Parent)</p>
-                                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-0.5 transition-colors">
-                                                        <UserCheck className="size-3.5 text-slate-400 dark:text-slate-500" />
+                                                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors">
+                                                    <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest transition-colors">Submitted By (Parent)</p>
+                                                    <p className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 mt-1.5 transition-colors">
+                                                        <UserCheck className="size-4 text-slate-400 dark:text-slate-500" />
                                                         {reviewingEnrollment.user.first_name} {reviewingEnrollment.user.last_name}
                                                     </p>
                                                 </div>
@@ -846,25 +876,25 @@ export default function StudentManagement() {
                                         </div>
 
                                         {/* Assignment Area */}
-                                        <div className="rounded-2xl border-2 border-indigo-50 dark:border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-500/10 p-5 shadow-inner space-y-4 relative overflow-hidden transition-colors">
-                                            <div className="absolute -right-4 -top-4 size-20 rounded-full bg-indigo-100 dark:bg-indigo-500/20 blur-2xl opacity-50 transition-colors"></div>
-                                            <h4 className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] relative z-10 transition-colors">
+                                        <div className="rounded-2xl border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/50 dark:bg-indigo-500/10 p-6 sm:p-8 shadow-sm space-y-6 relative overflow-hidden transition-colors">
+                                            <div className="absolute -right-8 -top-8 size-32 rounded-full bg-indigo-100 dark:bg-indigo-500/20 blur-3xl transition-colors"></div>
+                                            <h4 className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest relative z-10 transition-colors">
                                                 Final Placement
                                             </h4>
 
                                             <div className="relative z-10 space-y-4">
                                                 <div>
-                                                    <label className="mb-2 block text-xs font-black text-slate-700 dark:text-slate-300 transition-colors">Assign to Section / Class *</label>
+                                                    <label className="mb-2.5 block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Assign to Section / Class <span className="text-red-500">*</span></label>
                                                     {sections.filter((s) => s.daycare_id == reviewingEnrollment.daycare.id).length === 0 ? (
-                                                        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 p-4 text-xs text-red-600 dark:text-red-400 font-medium transition-colors">
+                                                        <div className="rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400 font-medium transition-colors">
                                                             No Sections configured for <b className="dark:text-red-300">{reviewingEnrollment.daycare.name}</b>. Create a section in settings first.
                                                         </div>
                                                     ) : (
                                                         <>
                                                             <select
                                                                 className={cn(
-                                                                    "w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-zinc-900 px-3 text-sm font-bold shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/20",
-                                                                    selectedSectionId ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-500"
+                                                                    "w-full h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 px-4 text-base font-bold shadow-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-500/20",
+                                                                    selectedSectionId ? "text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"
                                                                 )}
                                                                 value={selectedSectionId}
                                                                 onChange={(e) => setSelectedSectionId(e.target.value)}
@@ -882,7 +912,7 @@ export default function StudentManagement() {
                                                                                 key={section.id}
                                                                                 value={section.id}
                                                                                 disabled={isFull}
-                                                                                className={isFull ? "text-red-400 dark:text-red-500" : "text-slate-900 dark:text-slate-200"}
+                                                                                className={isFull ? "text-red-400 dark:text-red-500 font-bold" : "text-slate-900 dark:text-slate-200 font-bold"}
                                                                             >
                                                                                 {section.name} — {currentCount}/{section.capacity}
                                                                                 {isFull ? " (FULL)" : ` (${remaining} slots left)`}
@@ -891,14 +921,14 @@ export default function StudentManagement() {
                                                                     })}
                                                             </select>
                                                             {selectedSectionId && (
-                                                                <div className="mt-3 flex items-center gap-2 rounded-lg bg-white/50 dark:bg-zinc-900/50 p-2 border border-indigo-100/50 dark:border-indigo-500/20 transition-colors">
-                                                                    <div className="size-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                                                                    <p className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-tight transition-colors">
+                                                                <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-white dark:bg-zinc-900 p-4 border border-indigo-100 dark:border-indigo-500/20 shadow-sm transition-colors">
+                                                                    <div className="size-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse shrink-0" />
+                                                                    <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest transition-colors">
                                                                         Real-time Slot Verification Active
                                                                     </p>
                                                                 </div>
                                                             )}
-                                                            <p className="mt-2 text-[10px] text-indigo-500 dark:text-indigo-400 font-medium transition-colors">
+                                                            <p className="mt-4 text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest transition-colors leading-relaxed">
                                                                 This learner will be added to the teacher's roster immediately upon approval.
                                                             </p>
                                                         </>
@@ -911,19 +941,67 @@ export default function StudentManagement() {
                             </div>
                         )}
 
-                        <DialogFooter className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex flex-row items-center justify-between sm:justify-between rounded-b-2xl transition-colors">
+                        <DialogFooter className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 flex flex-col sm:flex-row items-center justify-end sm:justify-between gap-3 shrink-0 transition-colors m-0">
                             <Button
                                 variant="ghost"
-                                className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-500/10 font-bold h-11 rounded-xl transition-colors"
-                                onClick={handleRejectEnrollment}
+                                className="w-full sm:w-auto px-6 h-12 rounded-xl text-base font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
+                                onClick={() => setIsReviewOpen(false)}
                             >
-                                <XCircle className="mr-2 size-4" /> Reject Application
+                                <XCircle className="mr-2 size-5" /> Cancel Review
                             </Button>
-                            <Button
-                                onClick={handleApproveEnrollment}
-                                className="bg-emerald-600 dark:bg-emerald-600 text-white hover:bg-emerald-700 dark:hover:bg-emerald-500 shadow-lg shadow-emerald-600/20 px-8 h-11 rounded-xl font-bold transition-all hover:-translate-y-0.5"
-                            >
-                                <CheckCircle2 className="mr-2 size-4" /> Approve & Enroll
+                            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                {/* 🚀 CHANGED onClick to open the new Reject Dialog */}
+                                <Button
+                                    variant="outline"
+                                    className="w-full sm:w-auto px-6 h-12 rounded-xl text-base font-bold text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                    onClick={openRejectDialog}
+                                >
+                                    <XCircle className="mr-2 size-5" /> Reject
+                                </Button>
+                                <Button
+                                    onClick={handleApproveEnrollment}
+                                    className="w-full sm:w-auto px-8 h-12 rounded-xl text-base font-bold bg-emerald-600 dark:bg-emerald-600 text-white hover:bg-emerald-700 dark:hover:bg-emerald-500 shadow-sm transition-all"
+                                >
+                                    <CheckCircle2 className="mr-2 size-5" /> Approve & Enroll
+                                </Button>
+                            </div>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* 🚀 2. NEW REJECT APPLICATION MODAL */}
+                <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+                    <DialogContent className="sm:max-w-[450px] bg-white dark:bg-zinc-950 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-0">
+                        <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                            <DialogHeader className="text-left">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="p-3 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shrink-0">
+                                        <XCircle className="size-6" strokeWidth={2.5} />
+                                    </div>
+                                    <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Reject Application</DialogTitle>
+                                </div>
+                                <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                                    Please provide a reason. This will be securely sent to the parent's notification center.
+                                </DialogDescription>
+                            </DialogHeader>
+                        </div>
+
+                        <div className="p-6 sm:p-8 bg-slate-50 dark:bg-zinc-950/30">
+                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2.5 block">Reason for Rejection <span className="text-red-500">*</span></label>
+                            <textarea
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="e.g., Missing valid parent ID, Daycare section is currently full..."
+                                className="w-full h-32 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 px-4 py-3 text-base font-medium text-slate-900 dark:text-white shadow-sm transition-all focus:border-red-500 focus:ring-4 focus:ring-red-500/10 dark:focus:ring-red-500/20 resize-none"
+                            />
+                        </div>
+
+                        <DialogFooter className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex flex-col sm:flex-row justify-end items-center gap-3 transition-colors m-0 shrink-0">
+                            <Button variant="ghost" onClick={() => setIsRejectDialogOpen(false)} className="w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors">
+                                Cancel
+                            </Button>
+                            <Button onClick={handleRejectEnrollment} className="w-full sm:w-auto h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8 shadow-sm transition-colors">
+                                Confirm Rejection
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -986,30 +1064,39 @@ export default function StudentManagement() {
             </div>
 
             <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
-                <DialogContent className="text-center sm:max-w-md bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200">
-                    <DialogHeader>
-                        <DialogTitle className="text-center text-2xl font-bold text-indigo-600 dark:text-indigo-400 transition-colors">Student Added Successfully!</DialogTitle>
-                        <DialogDescription className="pt-2 text-center text-slate-600 dark:text-slate-400 transition-colors">
-                            Please provide this Secret PIN to the parents of <br />
-                            <span className="font-semibold text-slate-900 dark:text-slate-200">{pinData.name}</span>.
-                        </DialogDescription>
-                    </DialogHeader>
+                <DialogContent hideClose className="text-center sm:max-w-[500px] p-0 overflow-hidden bg-white dark:bg-zinc-950 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200 flex flex-col">
 
-                    <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                        <div className="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-zinc-900 px-8 py-4 transition-colors">
-                            <span className="font-mono text-4xl font-black tracking-[0.2em] text-slate-900 dark:text-white transition-colors">{pinData.code}</span>
+                    <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                        <DialogHeader className="text-left">
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
+                                    <CheckCircle2 className="size-6" strokeWidth={2.5} />
+                                </div>
+                                <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    Student Added!
+                                </DialogTitle>
+                            </div>
+                            <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2 transition-colors">
+                                Please provide this Secret PIN to the parents of <strong className="text-slate-900 dark:text-white font-black">{pinData.name}</strong>.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center p-6 sm:p-8 space-y-6 bg-slate-50 dark:bg-zinc-950/30 transition-colors">
+                        <div className="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-zinc-900 px-8 py-6 shadow-sm transition-colors w-full">
+                            <span className="font-mono text-5xl sm:text-6xl font-black tracking-[0.2em] text-slate-900 dark:text-white transition-colors block text-center">{pinData.code}</span>
                         </div>
-                        <p className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-sm text-amber-600 dark:text-amber-400 transition-colors">
-                            Parents will need this code + the child's exact Date of Birth to link their accounts.
+                        <p className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 px-5 py-4 text-sm font-bold text-amber-600 dark:text-amber-400 transition-colors w-full text-left leading-relaxed">
+                            Parents will need this code + the child's exact Date of Birth to successfully link their accounts.
                         </p>
                     </div>
 
-                    <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-center">
-                        <Button type="button" variant="outline" onClick={copyToClipboard} className="gap-2 bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                            {copied ? <Check className="size-4 text-green-600 dark:text-green-500" /> : <Copy className="size-4" />}
-                            {copied ? 'Copied!' : 'Copy Code'}
+                    <DialogFooter className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex flex-col sm:flex-row justify-end items-center gap-3 transition-colors m-0 shrink-0">
+                        <Button type="button" variant="ghost" onClick={copyToClipboard} className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors">
+                            {copied ? <CheckCircle2 className="mr-2 size-5 text-emerald-600 dark:text-emerald-500" /> : <Copy className="mr-2 size-5" />}
+                            {copied ? 'Copied!' : 'Copy PIN'}
                         </Button>
-                        <Button type="button" onClick={() => setPinModalOpen(false)} className="bg-indigo-600 dark:bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-500 transition-colors">
+                        <Button type="button" onClick={() => setPinModalOpen(false)} className="h-12 w-full sm:w-auto px-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-base font-bold shadow-sm transition-colors">
                             Done
                         </Button>
                     </DialogFooter>

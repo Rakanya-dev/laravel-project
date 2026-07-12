@@ -1,8 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export interface FlexibleAssessmentHistory {
@@ -102,90 +101,120 @@ export function NewAssessmentDialog({ open, onOpenChange, students, domains, ass
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl transition-colors duration-200">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-900 dark:text-white transition-colors">
-                        <Users className="size-5 text-indigo-600 dark:text-indigo-400 transition-colors" />
-                        Create Assessments
-                    </DialogTitle>
-                    <DialogDescription className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 transition-colors">
-                        Select students to generate drafts for. The system automatically detects their next phase.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-2">
-                    <div className="mb-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 transition-colors">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors">Eligible Students</span>
-                        <Button variant="ghost" size="sm" onClick={handleSelectAllEligible} className="h-8 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 font-bold transition-colors">
-                            Select All
+            <DialogContent hideClose className="sm:max-w-[650px] p-0 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl bg-white dark:bg-zinc-950 transition-colors duration-200 flex flex-col max-h-[90vh]">
+
+                {/* --- PREMIUM HEADER --- */}
+                <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors shrink-0">
+                    <DialogHeader className="text-left">
+                        <div className="flex items-center gap-4 mb-2">
+                            <div className="p-3 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
+                                <Users className="size-6" strokeWidth={2.5} />
+                            </div>
+                            <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                Create Assessments
+                            </DialogTitle>
+                        </div>
+                        <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2 transition-colors">
+                            Select students to generate drafts for. The system automatically detects their next phase.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+
+                {/* --- SCROLLABLE BODY --- */}
+                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 sm:space-y-8 custom-scrollbar bg-slate-50 dark:bg-zinc-950/30">
+
+                    {/* Toolbar */}
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4 transition-colors">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                            Eligible Students
+                        </span>
+                        <Button
+                            variant="ghost"
+                            onClick={handleSelectAllEligible}
+                            className="h-10 px-4 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 font-bold rounded-xl transition-colors"
+                        >
+                            {selectedIds.size > 0 && selectedIds.size === studentListWithPhases.filter(s => !s.isLocked).length ? 'Deselect All' : 'Select All'}
                         </Button>
                     </div>
 
-                    {/* Scrollable List of Checkboxes */}
-                    <ScrollArea className="h-[250px] pr-4 rounded-md">
-                        <div className="space-y-2 pb-2">
-                            {studentListWithPhases.map((student) => (
-                                <div
-                                    key={student.id}
-                                    onClick={() => {
-                                        if (!student.isLocked) {
-                                            handleToggleSelect(student.id);
-                                        }
-                                    }}
-                                    className={`flex items-center justify-between rounded-xl border p-3 transition-all duration-200 ${
-                                        student.isLocked
-                                            ? 'cursor-not-allowed bg-slate-50 dark:bg-zinc-900 border-slate-100 dark:border-slate-800 opacity-60'
-                                            : selectedIds.has(student.id)
-                                              ? 'cursor-pointer border-indigo-300 dark:border-indigo-500/50 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm'
-                                              : 'cursor-pointer border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-950 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                                    }`}
-                                >
-                                    <div className="flex w-full items-center gap-3">
-                                        <Checkbox
-                                            checked={selectedIds.has(student.id)}
-                                            disabled={student.isLocked}
-                                            onCheckedChange={() => handleToggleSelect(student.id)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="border-slate-300 dark:border-slate-600 data-[state=checked]:bg-indigo-600 dark:data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-600 dark:data-[state=checked]:border-indigo-500 transition-colors"
-                                        />
-                                        <div className="flex-1 select-none">
-                                            <p className="mb-0.5 text-[15px] leading-none font-bold text-slate-900 dark:text-white transition-colors">
-                                                {student.name} <span className="text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors">({student.age}y)</span>
-                                            </p>
-                                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 transition-colors">{student.statusLabel || `Ready for: ${student.nextPhase}`}</p>
-                                        </div>
+                    {/* List */}
+                    <div className="space-y-3">
+                        {studentListWithPhases.map((student) => (
+                            <div
+                                key={student.id}
+                                onClick={() => {
+                                    if (!student.isLocked) {
+                                        handleToggleSelect(student.id);
+                                    }
+                                }}
+                                className={`flex items-center justify-between rounded-2xl border p-4 sm:p-5 transition-all duration-200 ${
+                                    student.isLocked
+                                        ? 'cursor-not-allowed bg-slate-50/50 dark:bg-zinc-900/50 border-slate-100 dark:border-slate-800 opacity-60'
+                                        : selectedIds.has(student.id)
+                                          ? 'cursor-pointer border-indigo-300 dark:border-indigo-500/50 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm'
+                                          : 'cursor-pointer border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-950 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                                }`}
+                            >
+                                <div className="flex w-full items-center gap-4">
+                                    <Checkbox
+                                        checked={selectedIds.has(student.id)}
+                                        disabled={student.isLocked}
+                                        onCheckedChange={() => handleToggleSelect(student.id)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="size-5 rounded-md border-slate-300 dark:border-slate-600 data-[state=checked]:bg-indigo-600 dark:data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-600 dark:data-[state=checked]:border-indigo-500 transition-colors"
+                                    />
+                                    <div className="flex-1 select-none flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+                                        <p className="text-base font-bold text-slate-900 dark:text-white transition-colors truncate">
+                                            {student.name} <span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-1">({student.age}y)</span>
+                                        </p>
+                                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors shrink-0 mt-0.5 sm:mt-0">
+                                            {student.statusLabel || `Ready for: ${student.nextPhase}`}
+                                        </p>
                                     </div>
-
-                                    {/* Small icon if they have a previous warning */}
-                                    {!student.isLocked && student.alert && (
-                                        <span title="Has previous warnings" className="ml-2 flex items-center shrink-0">
-                                            <AlertTriangle className="size-4 text-amber-500 dark:text-amber-400 transition-colors" />
-                                        </span>
-                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+
+                                {/* Small icon if they have a previous warning */}
+                                {!student.isLocked && student.alert && (
+                                    <span title="Has previous warnings" className="ml-4 flex items-center shrink-0">
+                                        <AlertTriangle className="size-5 text-amber-500 dark:text-amber-400 transition-colors" />
+                                    </span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
 
                     {/* Show a summary if any selected students have warnings */}
                     {activeWarnings.length > 0 && (
-                        <div className="mt-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 p-3.5 text-sm text-amber-800 dark:text-amber-400 shadow-sm transition-colors">
-                            <p className="mb-1 flex items-center gap-2 font-bold">
-                                <AlertTriangle className="size-4" /> Heads up!
-                            </p>
-                            <p className="font-medium text-amber-700/90 dark:text-amber-400/80 leading-relaxed">
-                                <strong className="text-amber-900 dark:text-amber-300">{activeWarnings.length}</strong> selected student(s) have previous flags that need monitoring during this evaluation.
-                            </p>
+                        <div className="mt-8 flex items-start gap-4 rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-5 sm:p-6 border border-amber-200 dark:border-amber-900/50 shadow-sm transition-colors animate-in fade-in slide-in-from-bottom-2">
+                            <AlertTriangle className="size-6 shrink-0 text-amber-500 dark:text-amber-400" />
+                            <div className="font-medium text-amber-800 dark:text-amber-300">
+                                <p className="font-extrabold uppercase tracking-widest text-[11px] mb-1.5">Heads Up</p>
+                                <p className="text-base leading-relaxed">
+                                    <strong className="text-amber-900 dark:text-amber-100 font-black">{activeWarnings.length}</strong> selected student(s) have previous flags that need monitoring during this evaluation.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </div>
-                <DialogFooter className="gap-2 sm:gap-0 mt-2 border-t border-slate-100 dark:border-slate-800 pt-4 transition-colors">
-                    <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto font-bold h-11 rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                        Cancel
+
+                {/* --- PREMIUM FOOTER --- */}
+                <DialogFooter className="px-6 py-5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-100 dark:border-slate-800 flex-col sm:flex-row justify-end items-center gap-3 transition-colors m-0 shrink-0">
+                    <Button
+                        variant="ghost"
+                        onClick={() => onOpenChange(false)}
+                        className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                        <X className="mr-2 size-5" /> Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isSubmitting || selectedIds.size === 0} className="w-full sm:w-auto font-bold h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white shadow-sm transition-colors">
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSubmitting || selectedIds.size === 0}
+                        className="h-12 w-full sm:w-auto px-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-base font-bold shadow-sm transition-colors"
+                    >
                         {isSubmitting ? 'Generating...' : `Generate ${selectedIds.size} Draft${selectedIds.size === 1 ? '' : 's'}`}
                     </Button>
                 </DialogFooter>
+
             </DialogContent>
         </Dialog>
     );

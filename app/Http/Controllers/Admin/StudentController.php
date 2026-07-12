@@ -160,16 +160,37 @@ class StudentController extends Controller
      */
     public function rejectEnrollment(Request $request, $id)
     {
-        $enrollment = EnrollmentRequest::findOrFail($id);
+        // 1. Validate the incoming reason from the React modal
+        $request->validate([
+            'reason' => 'required|string|max:1000',
+        ]);
 
-        Storage::delete($enrollment->birth_cert_path);
-        Storage::delete($enrollment->parent_id_path);
+        // 2. Fetch the enrollment AND the associated parent user
+        $enrollment = EnrollmentRequest::with('user')->findOrFail($id);
 
+        // 3. Securely delete the sensitive documents
+        if ($enrollment->birth_cert_path) {
+            Storage::delete($enrollment->birth_cert_path);
+        }
+        if ($enrollment->parent_id_path) {
+            Storage::delete($enrollment->parent_id_path);
+        }
+
+        // 4. Update the database status
         $enrollment->update(['status' => 'Rejected']);
 
-        return redirect()->back()->with('success', 'Application rejected and documents securely deleted.');
-    }
+        // 5. Fire the real-time WebSocket notification to the Parent
+        if ($enrollment->user) {
+            $enrollment->user->notify(new \App\Notifications\AppNotification(
+                'rejected', // Triggers the red X icon in your React popover
+                'Enrollment Update',
+                "Unfortunately, the enrollment application for {$enrollment->first_name} was not approved. Reason: {$request->reason}",
+                '/parent/dashboard' // Update this to wherever parents view their application status
+            ));
+        }
 
+        return redirect()->back()->with('success', 'Application rejected, documents purged, and parent notified.');
+    }
     /**
      * Store a newly created student in storage.
      */
@@ -551,5 +572,39 @@ class StudentController extends Controller
         ]);
 
         return $pdf->stream($student->last_name . '_Official_ECCD_Report.pdf');
+    }
+
+    public function printAll(Request $request)
+    {
+        $query = Student::with('daycare'); // Eager load daycare to prevent N+1 issues
+
+        // Apply Search Filter
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('first_name', 'like', '%' . $request->search . '%')
+                    ->orWhere('last_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Apply Status Filter
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // Apply Daycare Branch Filter (Admin specific)
+        if ($request->daycare && $request->daycare !== 'all') {
+            $query->whereHas('daycare', function ($q) use ($request) {
+                $q->where('name', $request->daycare);
+            });
+        }
+
+        // Use get() instead of paginate() to fetch EVERYTHING
+        $students = $query->get();
+
+        return view('print.students-spreadsheet', [
+            'students' => $students,
+            'title' => 'Master Student Roster (Admin)',
+            'role' => 'admin'
+        ]);
     }
 }

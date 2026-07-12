@@ -199,7 +199,8 @@ export default function TeacherDashboard() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Teacher Dashboard" />
 
-            <div className="p-4 sm:p-6 lg:p-8">
+            {/* 🚀 PREMIUM PAGE WRAPPER */}
+            <div className="flex-1 p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 transition-colors w-full">
                 <TeacherDashboardOverview
                     teacherName={`${user.first_name} ${user.last_name}`}
                     daycareName={daycare ? daycare.name : 'Unassigned'}

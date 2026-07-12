@@ -15,7 +15,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Archive, X } from 'lucide-react';
 
 export interface MinimalStudent {
     firstName: string;
@@ -53,72 +53,84 @@ export function ArchiveStudentDialog({
         : `You are about to remove ${student?.firstName} ${student?.lastName} from the active roster. They will be moved to the Inactive/Withdrawn list.`;
 
     return (
-        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl transition-colors duration-200">
-            <DialogHeader className="p-6 pb-4 border-b border-amber-100 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-500/10 transition-colors">
-                <DialogTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-amber-700 dark:text-amber-500">
-                    <AlertTriangle className="size-5" />
-                    {title}
-                </DialogTitle>
-                <DialogDescription className="pt-2 text-sm font-medium text-amber-800/70 dark:text-amber-400/80 leading-relaxed">
-                    {description}
-                </DialogDescription>
-            </DialogHeader>
+        <DialogContent hideClose className="sm:max-w-[600px] p-0 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl bg-white dark:bg-zinc-950 transition-colors duration-200">
 
-            <div className="grid gap-5 p-6 bg-slate-50/50 dark:bg-zinc-950 transition-colors">
+            {/* --- PREMIUM HEADER --- */}
+            <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                <DialogHeader className="text-left">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+                            <AlertTriangle className="size-6" strokeWidth={2.5} />
+                        </div>
+                        <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                            {title}
+                        </DialogTitle>
+                    </div>
+                    <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2 transition-colors">
+                        {description}
+                    </DialogDescription>
+                </DialogHeader>
+            </div>
+
+            {/* --- SCROLLABLE BODY --- */}
+            <div className="p-6 sm:p-8 space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-zinc-950/30">
+
                 {/* Status Dropdown */}
-                <div className="space-y-2">
-                    <Label htmlFor="status" className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Archive Status <span className="text-rose-500 dark:text-rose-400">*</span>
+                <div className="space-y-2.5">
+                    <Label htmlFor="status" className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                        Archive Status <span className="text-red-500">*</span>
                     </Label>
                     <Select value={archiveStatus} onValueChange={onArchiveStatusChange}>
                         <SelectTrigger
                             id="status"
-                            className={`h-11 rounded-xl transition-all ${
+                            className={`h-12 text-base font-medium rounded-xl shadow-sm transition-all focus-visible:ring-indigo-500 ${
                                 !archiveStatus
-                                    ? 'border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-slate-500 dark:text-slate-400'
-                                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 font-medium text-slate-900 dark:text-white focus:ring-indigo-500'
+                                    ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white'
                             }`}
                         >
                             <SelectValue placeholder="Select a status..." />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800">
-                            <SelectItem value="Inactive" className="font-medium dark:focus:bg-zinc-800 dark:text-slate-200">Inactive (Dropped / Paused)</SelectItem>
-                            <SelectItem value="Transferred" className="font-medium dark:focus:bg-zinc-800 dark:text-slate-200">Transferred to another school</SelectItem>
+                        <SelectContent className="rounded-xl dark:bg-zinc-900 dark:border-slate-800 transition-colors">
+                            <SelectItem value="Inactive" className="font-medium rounded-lg py-3 cursor-pointer transition-colors text-base">Inactive (Dropped / Paused)</SelectItem>
+                            <SelectItem value="Transferred" className="font-medium rounded-lg py-3 cursor-pointer transition-colors text-base">Transferred to another school</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
 
                 {/* Reason Textarea */}
-                <div className="space-y-2">
-                    <Label htmlFor="reason" className="text-sm font-semibold text-slate-700 dark:text-slate-300">Reason / Notes</Label>
+                <div className="space-y-2.5">
+                    <Label htmlFor="reason" className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                        Reason / Notes
+                    </Label>
                     <Textarea
                         id="reason"
                         placeholder="Briefly explain why they are leaving..."
                         value={archiveReason}
                         onChange={(e) => onArchiveReasonChange(e.target.value)}
-                        className="resize-none rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 focus-visible:ring-indigo-500 font-medium text-slate-900 dark:text-white dark:placeholder:text-slate-500 transition-colors"
-                        rows={3}
+                        className="min-h-[120px] resize-none p-4 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 shadow-sm focus-visible:ring-indigo-500 transition-colors"
                     />
                 </div>
             </div>
 
-            <DialogFooter className="p-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-950 flex flex-row justify-end items-center gap-2 sm:gap-2 transition-colors">
+            {/* --- PREMIUM FOOTER --- */}
+            <DialogFooter className="px-6 py-5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 flex-col sm:flex-row transition-colors m-0">
                 <Button
                     variant="ghost"
                     onClick={onCancel}
-                    className="h-11 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors w-full sm:w-auto"
+                    className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors"
                 >
-                    Cancel
+                    <X className="mr-2 size-5" /> Cancel
                 </Button>
                 <Button
-                    variant="destructive"
                     onClick={onConfirm}
                     disabled={!archiveStatus}
-                    className="h-11 rounded-xl font-bold bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white shadow-sm transition-colors w-full sm:w-auto disabled:opacity-50"
+                    className="h-12 w-full sm:w-auto px-8 rounded-xl bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white text-base font-bold shadow-sm transition-colors disabled:opacity-50"
                 >
-                    Confirm Archive
+                    <Archive className="mr-2 size-5" /> Confirm Archive
                 </Button>
             </DialogFooter>
+
         </DialogContent>
     );
 }

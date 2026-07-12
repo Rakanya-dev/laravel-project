@@ -22,6 +22,7 @@ class ReportController extends Controller
 
         // 2. Initialize an array to hold the totals and counts for averaging
         $domainStats = [];
+        $daycareList = Daycare::orderBy('name')->pluck('name');
 
         foreach ($assessments as $assessment) {
             foreach ($assessment->scores as $score) {
@@ -45,7 +46,7 @@ class ReportController extends Controller
             ];
         }
 
-        // --- 2. NEW: SYSTEM COMPLIANCE STATS ---
+        // --- 4. SYSTEM COMPLIANCE STATS ---
         $totalActiveStudents = Student::whereNull('deleted_at')->count();
 
         $completedCount = Assessment::where('assessment_type', '3rd Assessment')
@@ -62,9 +63,98 @@ class ReportController extends Controller
             ['name' => 'Not Started', 'value' => $missingCount, 'color' => '#ef4444'],
         ];
 
+        // --- 5. 🚀 NEW: MASTER ROSTER PREVIEW DATA ---
+        // Fetch up to 100 students for the preview panel to keep loading fast
+        // --- 🚀 NEW: Check if React is asking for a specific daycare ---
+        $selectedDaycare = request('daycare', 'all');
+
+        $masterQuery = Student::whereHas('assessments', function ($query) {
+            $query->where('assessment_type', '3rd Assessment')
+                ->where('status', 'Completed')
+                ->where('form_type', 'record_2');
+        })
+            ->with([
+                'daycare',
+                'assessments' => function ($query) {
+                    $query->where('assessment_type', '3rd Assessment')
+                        ->where('status', 'Completed')
+                        ->where('form_type', 'record_2')
+                        ->latest('assessment_date');
+                }
+            ])
+            ->whereNull('deleted_at');
+
+        // 🚀 Apply the Database Filter if a specific daycare is selected!
+        if ($selectedDaycare !== 'all') {
+            $masterQuery->whereHas('daycare', function ($q) use ($selectedDaycare) {
+                $q->where('name', $selectedDaycare);
+            });
+        }
+
+        // Now we fetch the data (it will only pull the 100 students for the selected center)
+        $rawMasterData = $masterQuery
+            ->orderBy('daycare_id')
+            ->orderBy('last_name')
+            ->take(100)
+            ->get()
+            ->map(function ($student) {
+                $finalAssessment = $student->assessments->first();
+                $isDevelopmentallyOnTrack = in_array($finalAssessment->overall_rating, ['Average', 'Highly Advanced', 'Slight Delay']);
+
+                return [
+                    'id' => $student->id,
+                    'name' => $student->last_name . ', ' . $student->first_name,
+                    'daycare' => $student->daycare ? $student->daycare->name : 'Unassigned',
+                    'final_score' => $finalAssessment->overall_score,
+                    'status' => $isDevelopmentallyOnTrack ? 'Eligible' : 'Needs Review'
+                ];
+            });
+
+
+        // --- 6. 🚀 NEW: COMPLIANCE AUDIT PREVIEW DATA ---
+        $rawAuditData = Daycare::with([
+            'students' => function ($query) {
+                $query->whereNull('deleted_at')->with('assessments');
+            }
+        ])->get()->map(function ($daycare) {
+            $total = $daycare->students->count();
+
+            if ($total === 0)
+                return null; // Skip daycares with no students
+
+            // Helper function to calculate status string for a given period
+            $getStatus = function ($period) use ($daycare, $total) {
+                $completed = 0;
+                foreach ($daycare->students as $student) {
+                    $assessment = $student->assessments->where('assessment_type', $period)->first();
+                    if ($assessment && $assessment->status === 'Completed') {
+                        $completed++;
+                    }
+                }
+
+                if ($completed === 0)
+                    return 'Missing';
+                if ($completed === $total)
+                    return 'Complete';
+                return 'Pending'; // Partially completed
+            };
+
+            return [
+                'center_name' => $daycare->name,
+                'p1_status' => $getStatus('1st Assessment'),
+                'p2_status' => $getStatus('2nd Assessment'),
+                'p3_status' => $getStatus('3rd Assessment'),
+            ];
+        })->filter()->values();
+
+
+        // Pass everything to the React Frontend
         return inertia('admin/reports/index', [
             'domainReports' => $chartData,
-            'complianceStats' => $complianceChartData
+            'complianceStats' => $complianceChartData,
+            'rawMasterData' => $rawMasterData,
+            'rawAuditData' => $rawAuditData,
+            'daycareList' => $daycareList,
         ]);
     }
 
@@ -72,7 +162,7 @@ class ReportController extends Controller
     {
         $fileName = 'graduating_class_roster_' . date('Y-m-d') . '.csv';
 
-        // 🚀 OPTIMIZATION: We build the query here, but we DO NOT use ->get() yet!
+        // 1. Start building the query
         $query = Student::whereHas('assessments', function ($query) {
             $query->where('assessment_type', '3rd Assessment')
                 ->where('status', 'Completed')
@@ -87,9 +177,24 @@ class ReportController extends Controller
                         ->latest('assessment_date');
                 }
             ])
-            ->whereNull('deleted_at')
-            ->orderBy('daycare_id')
-            ->orderBy('last_name');
+            ->whereNull('deleted_at');
+
+        // 🚀 2. THE FIX: Handle Specific IDs OR Daycare Filters
+        if ($request->filled('ids')) {
+            // If they checked specific boxes, ONLY export those students
+            $selectedIds = explode(',', $request->input('ids'));
+            $query->whereIn('id', $selectedIds);
+        } elseif ($request->filled('daycare')) {
+            // If NO boxes are checked, but they filtered a specific Daycare, export all for that Daycare
+            $daycareName = $request->input('daycare');
+            $query->whereHas('daycare', function ($q) use ($daycareName) {
+                $q->where('name', $daycareName);
+            });
+        }
+        // If neither 'ids' nor 'daycare' is present, it will naturally export the entire database.
+
+        // 3. Apply the sorting
+        $query->orderBy('daycare_id')->orderBy('last_name');
 
         $headers = [
             "Content-type" => "text/csv",
@@ -110,12 +215,10 @@ class ReportController extends Controller
             'Graduation Status'
         ];
 
-        // 🚀 OPTIMIZATION: We pass the $query into the callback
         $callback = function () use ($query, $columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
 
-            // 🚀 OPTIMIZATION: cursor() streams rows 1-by-1 directly to the file. Zero memory bloat!
             foreach ($query->cursor() as $student) {
                 $finalAssessment = $student->assessments->first();
 
@@ -144,12 +247,11 @@ class ReportController extends Controller
 
         return new StreamedResponse($callback, 200, $headers);
     }
-
     public function exportComplianceAudit(Request $request)
     {
         $fileName = 'compliance_audit_' . date('Y-m-d') . '.csv';
 
-        // 🚀 OPTIMIZATION: Build query, no ->get()
+        // OPTIMIZATION: Build query, no ->get()
         $query = Daycare::with([
             'students' => function ($query) {
                 $query->whereNull('deleted_at')->with('assessments');
@@ -180,7 +282,7 @@ class ReportController extends Controller
 
             $periods = ['1st Assessment', '2nd Assessment', '3rd Assessment'];
 
-            // 🚀 OPTIMIZATION: Streaming daycares via cursor()
+            // OPTIMIZATION: Streaming daycares via cursor()
             foreach ($query->cursor() as $daycare) {
                 $totalStudents = $daycare->students->count();
 
@@ -231,8 +333,6 @@ class ReportController extends Controller
     {
         $fileName = 'consolidated_domain_report_' . date('Y-m-d') . '.pdf';
 
-        // Note: PDF generation requires all data upfront for the Blade view,
-        // so we keep ->get() here. This is perfectly fine for PDFs.
         $daycares = Daycare::with([
             'students' => function ($query) {
                 $query->whereNull('deleted_at')

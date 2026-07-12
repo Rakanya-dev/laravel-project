@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             DaycareSeeder::class,
             SectionSeeder::class,
             AssessmentDomainSeeder::class,
+            EccdScoringSeeder::class,
             StudentSeeder::class,
             AssessmentSeeder::class,
         ]);

@@ -172,6 +172,18 @@ class UsersController extends Controller
         return Redirect::back()->with('success', ucfirst($user->role) . ' deleted successfully.');
     }
 
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'type' => 'required|in:teachers,parents'
+        ]);
+
+        User::whereIn('id', $request->ids)->delete();
+
+        return redirect()->back();
+    }
+
     public function export(Request $request)
     {
         $request->validate([
@@ -209,6 +221,65 @@ class UsersController extends Controller
 
         return response()->json([
             'teachers' => $availableTeacherNames
+        ]);
+    }
+    public function printTeachers(Request $request)
+    {
+        // 1. Start your query (make sure to filter for teachers)
+        $query = User::where('role', 'teacher');
+
+        // 2. Apply the exact same filters you use for your React table
+        if ($request->search) {
+            $query->where('first_name', 'like', '%' . $request->search . '%')
+                ->orWhere('last_name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // 3. Use get() to fetch ALL records instead of paginate()
+        $users = $query->get();
+
+        // 4. Return a standard Blade view (not Inertia)
+        return view('print.users-spreadsheet', [
+            'users' => $users,
+            'title' => 'Registered Teachers & Staff'
+        ]);
+    }
+
+    public function printParents(Request $request)
+    {
+        // 1. Target parents instead of teachers
+        $query = User::with(['daycare', 'students.daycare'])->where('role', 'parent');
+
+        // 2. Search by Name
+        if ($request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('first_name', 'like', '%' . $request->search . '%')
+                    ->orWhere('last_name', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // 3. Filter by Status (Active, Pending, Inactive)
+        if ($request->status && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        // 4. Filter by Daycare Assignment (Optional but highly recommended)
+        if ($request->daycare && $request->daycare !== 'all') {
+            $query->whereHas('daycare', function ($q) use ($request) {
+                $q->where('name', $request->daycare);
+            });
+        }
+
+        // Fetch all matching records without pagination
+        $users = $query->get();
+
+        // 5. Reuse the exact same Blade view! Just change the title.
+        return view('print.users-spreadsheet', [
+            'users' => $users,
+            'title' => 'Registered Parents & Guardians'
         ]);
     }
 }

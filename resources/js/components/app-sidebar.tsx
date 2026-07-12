@@ -4,7 +4,6 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-// 👇 Added 'Settings2' for the configuration icon
 import { Building2, ClipboardList, FileBarChart2, GraduationCap, LayoutGrid, MessageSquareText, Settings2, User, Users } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -19,19 +18,24 @@ export function AppSidebar() {
             icon: LayoutGrid,
         },
         {
-            title: 'Users Management',
+            title: 'Staff & Users', // ✨ Removed "Management"
             href: '/admin/users-management',
             icon: Users,
         },
         {
-            title: 'Daycare Management',
+            title: 'Daycare Centers', // ✨ Removed "Management"
             href: '/admin/daycare-management',
             icon: Building2,
         },
         {
-            title: 'Student Management',
+            title: 'Students', // ✨ Removed "Management"
             href: '/admin/student-management',
             icon: GraduationCap,
+        },
+        {
+            title: 'Assessment Domains', // ✨ Removed "Management", much clearer context
+            href: '/admin/domain-management',
+            icon: Settings2,
         },
         {
             title: 'Reports',
@@ -58,7 +62,7 @@ export function AppSidebar() {
             icon: Users,
         },
         {
-            title: 'My Assessments',
+            title: 'Assessments', // ✨ Dropped "My" to make it faster to read
             href: '/teacher/assessments-management',
             icon: ClipboardList,
         },
@@ -88,6 +92,7 @@ export function AppSidebar() {
             icon: MessageSquareText,
         },
     ];
+
     const footerNavItems: NavItem[] = [];
 
     let mainNavItems: NavItem[] = [];

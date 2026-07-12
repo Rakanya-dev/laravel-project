@@ -33,6 +33,16 @@ class AssessmentController extends Controller
         return $assessment;
     }
 
+    // 🚀 NEW METHOD: This handles the click from the Notification!
+    public function show($id)
+    {
+        $assessment = $this->getSecureAssessment($id);
+
+        // 🚀 Redirect to dashboard, but append a secret URL parameter!
+        return redirect()->route('parent.dashboard', [
+            'open_assessment' => $assessment->id
+        ])->with('success', 'Assessment loaded successfully.');
+    }
     public function download($id)
     {
         $assessment = $this->getSecureAssessment($id);
@@ -53,4 +63,5 @@ class AssessmentController extends Controller
 
         return $pdf->stream($assessment->student->last_name . '_Assessment.pdf');
     }
+
 }

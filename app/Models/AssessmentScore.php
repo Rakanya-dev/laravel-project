@@ -19,6 +19,7 @@ class AssessmentScore extends Model
         'rating',
         'notes',
         'observations',
+        'is_included',
     ];
 
     /**

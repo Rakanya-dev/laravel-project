@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { DaycareFormData } from '@/pages/admin/daycare-management';
-import { Building2, MapPin, Phone, Users, UserCircle, CheckCircle } from 'lucide-react';
+import { Building2, MapPin, Phone, Users, UserCircle, CheckCircle, Mail, Plus, X } from 'lucide-react';
 
 import { formatPhoneNumber } from '@/utils/phone';
 
@@ -62,39 +62,50 @@ export default function AddDaycareDialog({
     };
 
     return (
-        <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 transition-colors duration-200">
-            <DialogHeader className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-950 shadow-sm z-10 transition-colors">
-                <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    Add New Daycare Center
-                </DialogTitle>
-                <DialogDescription className="text-slate-500 dark:text-slate-400 mt-1.5 text-sm leading-relaxed">
-                    Register a new daycare center branch into the management system.
-                </DialogDescription>
-            </DialogHeader>
+        <DialogContent hideClose className="sm:max-w-[700px] p-0 gap-0 overflow-hidden bg-white dark:bg-zinc-950 border-slate-200 dark:border-slate-800 transition-colors duration-200 shadow-2xl rounded-2xl">
 
-            <div className="p-6 overflow-y-auto max-h-[60vh] space-y-8 bg-slate-50/50 dark:bg-zinc-900/50 transition-colors">
+            {/* --- HEADER (Premium Standard) --- */}
+            <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors z-10">
+                <DialogHeader className="text-left">
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
+                            <Building2 className="size-6" strokeWidth={2.5} />
+                        </div>
+                        <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                            Add New Daycare Center
+                        </DialogTitle>
+                    </div>
+                    <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2">
+                        Register a new daycare center branch into the management system.
+                    </DialogDescription>
+                </DialogHeader>
+            </div>
+
+            <div className="p-6 sm:p-8 overflow-y-auto max-h-[65vh] space-y-8 bg-slate-50 dark:bg-zinc-950/30 transition-colors custom-scrollbar">
 
                 {/* --- Section: Basic Info --- */}
-                <div className="space-y-4">
-                    <h4 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase flex items-center gap-2">
-                        <Building2 className="size-4 text-indigo-500 dark:text-indigo-400" /> Center Information
+                <div className="space-y-6">
+                    <h4 className="flex items-center gap-3 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-200 dark:border-slate-800 pb-3 transition-colors">
+                        <Building2 className="size-5 text-indigo-500 dark:text-indigo-400" /> Center Information
                     </h4>
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            Daycare Name <span className="text-rose-500 dark:text-rose-400">*</span>
+
+                    <div className="space-y-2.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                            Daycare Name <span className="text-red-500 dark:text-red-400">*</span>
                         </Label>
                         <Input
                             placeholder="e.g. Happy Kids Learning Center"
-                            className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                            className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                             value={formData.name}
                             onChange={(e) => setField('name', e.target.value)}
                         />
                     </div>
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Description</Label>
+
+                    <div className="space-y-2.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Description</Label>
                         <Textarea
                             placeholder="A brief overview of the facility and its programs..."
-                            className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 resize-none h-20 focus-visible:ring-indigo-500 transition-colors"
+                            className="min-h-[140px] p-4 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 resize-none focus-visible:ring-indigo-500 transition-colors shadow-sm"
                             value={formData.description}
                             onChange={(e) => setField('description', e.target.value)}
                         />
@@ -102,49 +113,51 @@ export default function AddDaycareDialog({
                 </div>
 
                 {/* --- Section: Location --- */}
-                <div className="space-y-4 pt-2">
-                    <h4 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase flex items-center gap-2">
-                        <MapPin className="size-4 text-indigo-500 dark:text-indigo-400" /> Location Details
+                <div className="space-y-6">
+                    <h4 className="flex items-center gap-3 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-200 dark:border-slate-800 pb-3 transition-colors">
+                        <MapPin className="size-5 text-indigo-500 dark:text-indigo-400" /> Location Details
                     </h4>
-                    <div className="space-y-1.5">
-                        <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            Street Address <span className="text-rose-500 dark:text-rose-400">*</span>
+
+                    <div className="space-y-2.5">
+                        <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                            Street Address <span className="text-red-500 dark:text-red-400">*</span>
                         </Label>
                         <Input
                             placeholder="123 Main St, Brgy. San Jose"
-                            className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                            className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                             value={formData.address}
                             onChange={(e) => setField('address', e.target.value)}
                         />
                     </div>
-                    <div className="grid grid-cols-3 gap-5">
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                City <span className="text-rose-500 dark:text-rose-400">*</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                                City <span className="text-red-500 dark:text-red-400">*</span>
                             </Label>
                             <Input
                                 placeholder="GMA"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                                className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                                 value={formData.city}
                                 onChange={(e) => setField('city', e.target.value)}
                             />
                         </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                Province <span className="text-rose-500 dark:text-rose-400">*</span>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                                Province <span className="text-red-500 dark:text-red-400">*</span>
                             </Label>
                             <Input
                                 placeholder="Cavite"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                                className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                                 value={formData.province}
                                 onChange={(e) => setField('province', e.target.value)}
                             />
                         </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Postal Code</Label>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Postal Code</Label>
                             <Input
                                 placeholder="4117"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                                className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                                 value={formData.postal_code}
                                 onChange={(e) => setField('postal_code', e.target.value)}
                             />
@@ -153,50 +166,57 @@ export default function AddDaycareDialog({
                 </div>
 
                 {/* --- Section: Contact --- */}
-                <div className="space-y-4 pt-2">
-                    <h4 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase flex items-center gap-2">
-                        <Phone className="size-4 text-indigo-500 dark:text-indigo-400" /> Contact Information
+                <div className="space-y-6">
+                    <h4 className="flex items-center gap-3 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-200 dark:border-slate-800 pb-3 transition-colors">
+                        <Phone className="size-5 text-indigo-500 dark:text-indigo-400" /> Contact Information
                     </h4>
-                    <div className="grid grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                Email Address <span className="text-rose-500 dark:text-rose-400">*</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                                Email Address <span className="text-red-500 dark:text-red-400">*</span>
                             </Label>
-                            <Input
-                                type="email"
-                                placeholder="hello@daycare.com"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
-                                value={formData.email}
-                                onChange={(e) => setField('email', e.target.value)}
-                            />
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 dark:text-slate-500" />
+                                <Input
+                                    type="email"
+                                    placeholder="hello@daycare.com"
+                                    className="h-12 text-base pl-12 font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
+                                    value={formData.email}
+                                    onChange={(e) => setField('email', e.target.value)}
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                Mobile Number <span className="text-rose-500 dark:text-rose-400">*</span>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                                Mobile Number <span className="text-red-500 dark:text-red-400">*</span>
                             </Label>
-                            <Input
-                                type="tel"
-                                placeholder="+63 XXX XXX XXXX"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
-                                value={formData.phone}
-                                onChange={(e) => setField('phone', formatPhoneNumber(e.target.value))}
-                            />
+                            <div className="relative">
+                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-slate-400 dark:text-slate-500" />
+                                <Input
+                                    type="tel"
+                                    placeholder="+63 9XX XXX XXXX"
+                                    className="h-12 text-base pl-12 font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
+                                    value={formData.phone}
+                                    onChange={(e) => setField('phone', formatPhoneNumber(e.target.value))}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* --- Section: Assign Educators --- */}
-                <div className="space-y-4 pt-2">
-                    <h4 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <UserCircle className="size-4 text-indigo-500 dark:text-indigo-400" /> Assign Educators
+                <div className="space-y-6">
+                    <h4 className="flex items-center justify-between text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-200 dark:border-slate-800 pb-3 transition-colors">
+                        <div className="flex items-center gap-3">
+                            <UserCircle className="size-5 text-indigo-500 dark:text-indigo-400" /> Assign Educators
                         </div>
-                        <Badge className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold border-none transition-colors">
+                        <Badge className="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold px-3 py-1 text-[11px] shadow-none border-none transition-colors">
                             {(formData.teachers || []).length} Selected
                         </Badge>
                     </h4>
 
-                    <div className="max-h-[200px] overflow-y-auto space-y-2 p-1 scrollbar-thin dark:scrollbar-thumb-zinc-700">
+                    <div className="max-h-[240px] overflow-y-auto space-y-3 p-1 custom-scrollbar">
                         {(() => {
                             const currentTeachers = formData.teachers || [];
 
@@ -210,7 +230,7 @@ export default function AddDaycareDialog({
                             });
 
                             if (sortedTeachers.length === 0) {
-                                return <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4 border dark:border-slate-800 rounded-xl border-dashed transition-colors">No teachers available.</p>;
+                                return <p className="text-base font-medium text-slate-500 dark:text-slate-400 text-center py-6 border border-slate-200 dark:border-slate-800 rounded-xl border-dashed transition-colors">No teachers available.</p>;
                             }
 
                             return sortedTeachers.map((teacherName) => {
@@ -229,17 +249,17 @@ export default function AddDaycareDialog({
                                             }
                                             setField('teachers', updatedTeachers);
                                         }}
-                                        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isSelected
+                                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${isSelected
                                                 ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 shadow-sm'
                                                 : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-slate-50 dark:hover:bg-zinc-800'
                                             }`}
                                     >
-                                        <span className={`text-sm font-bold truncate pr-3 ${isSelected ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                                        <span className={`text-base font-bold truncate pr-3 ${isSelected ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300'}`}>
                                             {teacherName}
                                         </span>
-                                        <div className={`size-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-indigo-600 dark:bg-indigo-500 border-indigo-600 dark:border-indigo-500' : 'bg-white dark:bg-zinc-800 border-slate-300 dark:border-slate-600'
+                                        <div className={`size-6 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-indigo-600 dark:bg-indigo-500 border-indigo-600 dark:border-indigo-500' : 'bg-white dark:bg-zinc-800 border-slate-300 dark:border-slate-600'
                                             }`}>
-                                            {isSelected && <CheckCircle className="size-3.5 text-white" />}
+                                            {isSelected && <CheckCircle className="size-4 text-white" />}
                                         </div>
                                     </button>
                                 );
@@ -249,29 +269,30 @@ export default function AddDaycareDialog({
                 </div>
 
                 {/* --- Section: Operational --- */}
-                <div className="space-y-4 pt-2">
-                    <h4 className="text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase flex items-center gap-2">
-                        <Users className="size-4 text-indigo-500 dark:text-indigo-400" /> Operational Settings
+                <div className="space-y-6">
+                    <h4 className="flex items-center gap-3 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-200 dark:border-slate-800 pb-3 transition-colors">
+                        <Users className="size-5 text-indigo-500 dark:text-indigo-400" /> Operational Settings
                     </h4>
-                    <div className="grid grid-cols-2 gap-5">
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                Maximum Capacity <span className="text-rose-500 dark:text-rose-400">*</span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                                Maximum Capacity <span className="text-red-500 dark:text-red-400">*</span>
                             </Label>
                             <Input
                                 type="number"
                                 min="1"
                                 placeholder="50"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors"
+                                className="h-12 text-lg font-black rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white dark:placeholder:text-slate-500 focus-visible:ring-indigo-500 transition-colors shadow-sm"
                                 value={formData.capacity}
                                 onChange={(e) => setField('capacity', e.target.value)}
                             />
                         </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Established Date</Label>
+                        <div className="space-y-2.5">
+                            <Label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">Established Date</Label>
                             <Input
                                 type="date"
-                                className="bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus-visible:ring-indigo-500 transition-colors"
+                                className="h-12 text-base font-medium rounded-xl bg-white dark:bg-zinc-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white focus-visible:ring-indigo-500 transition-colors shadow-sm"
                                 value={formData.established_date}
                                 onChange={(e) => setField('established_date', e.target.value)}
                             />
@@ -281,19 +302,20 @@ export default function AddDaycareDialog({
 
             </div>
 
-            <DialogFooter className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-950 gap-2 sm:gap-0 transition-colors">
+            {/* --- FOOTER --- */}
+            <DialogFooter className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-zinc-950 flex justify-end gap-3 flex-col sm:flex-row transition-colors m-0 rounded-b-2xl">
                 <Button
                     variant="ghost"
                     onClick={() => onOpenChange(false)}
-                    className="w-full sm:w-auto text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-500 hover:bg-slate-200 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors m-0"
                 >
-                    Cancel
+                    <X className="mr-2 size-5" /> Cancel
                 </Button>
                 <Button
-                    className="w-full sm:w-auto gap-2 bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 shadow-sm transition-colors"
+                    className="h-12 w-full sm:w-auto px-8 rounded-xl bg-indigo-600 font-bold text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 shadow-sm transition-colors m-0"
                     onClick={handleSave}
                 >
-                    Create Center
+                    <Plus className="size-5 mr-2" /> Create Center
                 </Button>
             </DialogFooter>
         </DialogContent>

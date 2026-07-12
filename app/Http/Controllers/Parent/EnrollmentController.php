@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use App\Models\Student;
 
+// 🚀 ADDED NEW IMPORTS FOR NOTIFICATIONS
+use App\Models\User;
+use App\Notifications\AppNotification;
+use Illuminate\Support\Facades\Notification;
+
 class EnrollmentController extends Controller
 {
     public function store(Request $request)
@@ -46,6 +51,18 @@ class EnrollmentController extends Controller
             ]);
 
             DB::commit();
+
+            // 🚀 FIRE NEW ENROLLMENT NOTIFICATION TO ADMINS
+            $admins = User::where('role', 'admin')->get();
+            if ($admins->count() > 0) {
+                Notification::send($admins, new AppNotification(
+                    'enrollment', // Uses your emerald green icon
+                    'New Enrollment Application',
+                    "{$request->first_name} {$request->last_name} has applied for enrollment. Review required.",
+                    route('admin.student.index', ['tab' => 'pending'])
+                ));
+            }
+
             return back()->with('success', 'Application submitted! It is now under review by the Admin.');
 
         } catch (\Exception $e) {
@@ -138,6 +155,17 @@ class EnrollmentController extends Controller
 
             DB::commit();
             session()->forget('verified_link_student_id');
+
+            // 🚀 FIRE NEW LINKING NOTIFICATION TO ADMINS
+            $admins = User::where('role', 'admin')->get();
+            if ($admins->count() > 0) {
+                Notification::send($admins, new AppNotification(
+                    'enrollment',
+                    'Account Linking Request',
+                    "A parent has uploaded verification documents to link with student {$student->first_name} {$student->last_name}. Review required.",
+                    route('admin.student.index', ['tab' => 'pending'])
+                ));
+            }
 
             return redirect()->route('parent.dashboard')->with(
                 'success',

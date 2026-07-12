@@ -21,7 +21,6 @@ class DashboardController extends Controller
         $parent = Auth::user();
 
         // 🚀 OPTIMIZATION 1: Fetch students ONCE and sort their relationships at the DB level!
-        // This prevents double-querying and saves PHP RAM.
         $students = $parent->students()
             ->with([
                 'daycare',
@@ -32,23 +31,38 @@ class DashboardController extends Controller
             ])
             ->get();
 
+        // 🚀 NEW: Extract Daycare IDs to find the assigned teachers
+        $daycareIds = $students->pluck('daycare_id')->unique()->filter()->toArray();
+
+        // 🚀 NEW: Pass the raw teachers array explicitly so React can safely merge them without poller issues
+        $teachers = User::where('role', 'teacher')
+            ->whereIn('daycare_id', $daycareIds)
+            ->get()
+            ->map(function ($teacher) {
+                return [
+                    'id' => $teacher->id,
+                    'name' => $teacher->first_name . ' ' . $teacher->last_name,
+                    'role' => ucfirst($teacher->role ?? 'Child Development Worker'),
+                ];
+            });
+
         return Inertia::render('parent/dashboard', [
             'user' => $parent,
-            // Pass the pre-loaded students collection to the helpers
-            'conversations' => $this->getConversations($parent, $students),
+            'conversations' => $this->getConversations($parent), // Now only returns ACTUAL active chats
             'students' => $this->getStudentsData($students),
             'daycares' => Daycare::select('id', 'name')->get(),
             'pendingEnrollment' => EnrollmentRequest::where('user_id', $parent->id)->where('status', 'Pending')->first(),
+            'teachers' => $teachers, // 🚀 Passed explicitly here!
         ]);
     }
 
     /**
      * 2. EXTRACTED: CONVERSATION LOGIC
      */
-    private function getConversations($parent, $students)
+    private function getConversations($parent)
     {
-        // Get active chats
-        $existingConversations = Message::where('sender_id', $parent->id)
+        // 🚀 Simplified: Only get ACTIVE chats. React will automatically inject the empty teachers.
+        return Message::where('sender_id', $parent->id)
             ->orWhere('recipient_id', $parent->id)
             ->with(['sender', 'recipient'])
             ->get()
@@ -59,8 +73,7 @@ class DashboardController extends Controller
                 $lastMsg = $msgs->sortByDesc('created_at')->first();
                 $otherUser = $lastMsg->sender_id === $parent->id ? $lastMsg->recipient : $lastMsg->sender;
 
-                if (!$otherUser)
-                    return null;
+                if (!$otherUser) return null;
 
                 return [
                     'contact_id' => $otherUser->id,
@@ -73,29 +86,6 @@ class DashboardController extends Controller
             })
             ->filter()
             ->values();
-
-        // Get teachers the parent hasn't talked to yet
-        $existingContactIds = $existingConversations->pluck('contact_id')->toArray();
-
-        // 🚀 OPTIMIZATION 2: Re-use the in-memory students collection instead of hitting the DB again!
-        $daycareIds = $students->pluck('daycare_id')->unique()->filter()->toArray();
-
-        $availableTeachers = User::where('role', 'teacher')
-            ->whereIn('daycare_id', $daycareIds)
-            ->whereNotIn('id', $existingContactIds)
-            ->get()
-            ->map(function ($teacher) {
-                return [
-                    'contact_id' => $teacher->id,
-                    'contact_name' => $teacher->first_name . ' ' . $teacher->last_name,
-                    'contact_avatar' => $teacher->profile_photo,
-                    'contact_role' => 'Teacher',
-                    'last_message' => 'Say hello to start the conversation!',
-                    'time' => null,
-                ];
-            });
-
-        return collect($existingConversations)->concat($availableTeachers)->values();
     }
 
     /**
@@ -104,7 +94,6 @@ class DashboardController extends Controller
     private function getStudentsData($students)
     {
         return $students->map(function ($child) {
-            // 🚀 OPTIMIZATION 3: No need to sortByDesc() here anymore! The DB already did it perfectly.
             $sortedAssessments = $child->assessments;
             $lastAssessment = $sortedAssessments->first();
             $latestReport = $child->reports->first();
@@ -134,7 +123,17 @@ class DashboardController extends Controller
                         'assessment_date' => $a->assessment_date ?? $a->created_at,
                         'overall_score' => $a->overall_score ?? $a->standard_score,
                         'status' => $a->status,
-                        'scores' => $a->scores,
+                        'scores' => $a->scores->map(function ($score) {
+                            return [
+                                'id' => $score->id,
+                                'domain_name' => $score->domain->name ?? 'Unknown',
+                                'description' => $score->domain->description ?? '',
+                                'is_core' => (bool) ($score->domain->is_core ?? true),
+                                'raw_score' => (float) ($score->score ?? 0),
+                                'raw_max' => (float) ($score->max_score ?? 0),
+                                'scaled_score' => (float) ($score->scaled_score ?? 0),
+                            ];
+                        })->values(),
                     ];
                 })->values(),
                 'reports' => $sortedAssessments->where('status', 'Completed')->count() > 0
@@ -159,30 +158,43 @@ class DashboardController extends Controller
      */
     private function calculateProgressSummary($lastAssessment)
     {
-        if (!$lastAssessment || !$lastAssessment->scores)
+        if (!$lastAssessment || !$lastAssessment->scores) {
             return [];
+        }
 
         $totalMonths = (($lastAssessment->age_years ?? 0) * 12) + ($lastAssessment->age_months ?? 0);
         $isEccd = $totalMonths >= 37;
 
-        return $lastAssessment->scores->map(function ($score) use ($isEccd) {
-            $itedMaxScores = [
-                'Gross Motor' => 13,
-                'Fine Motor' => 11,
-                'Self-Help' => 27,
-                'Receptive Language' => 5,
-                'Expressive Language' => 8,
-                'Cognitive' => 21,
-                'Socio-Emotional' => 24,
-            ];
+        return $lastAssessment->scores
+            ->map(function ($score) use ($isEccd) {
 
-            $fullMark = $isEccd ? 19 : (float) ($score->max_score ?: ($itedMaxScores[$score->domain->name] ?? 20));
+                if (!$score->domain) {
+                    return null;
+                }
 
-            return [
-                'name' => $score->domain ? $score->domain->name : 'Domain',
-                'score' => $isEccd ? (float) ($score->scaled_score ?? 0) : (float) ($score->score ?? 0),
-                'fullMark' => $fullMark,
-            ];
-        })->values();
+                $rawMax = (float) ($score->max_score ?? $score->domain->max_score ?? 0);
+                if ($rawMax <= 0) $rawMax = 1;
+
+                if ($isEccd && $score->domain->is_core) {
+                    $chartMax = 19;
+                    $chartScore = (float) ($score->scaled_score ?? 0);
+                } else {
+                    $chartMax = $rawMax;
+                    $chartScore = (float) ($score->score ?? 0);
+                }
+
+                return [
+                    'name' => $score->domain->name,
+                    'is_core' => $score->domain->is_core,
+                    'description' => $score->domain->description ?? '',
+                    'raw_score' => (float) ($score->score ?? 0),
+                    'raw_max' => $rawMax,
+                    'scaled_score' => (float) ($score->scaled_score ?? 0),
+                    'score' => $chartScore,
+                    'fullMark' => $chartMax,
+                ];
+            })
+            ->filter()
+            ->values();
     }
 }

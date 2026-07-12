@@ -14,6 +14,7 @@ import type { Daycare as InertiaDaycare } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 import AddDaycareDialog from '@/components/admin/add-daycare-dialog';
 import DaycareOverview from '@/components/admin/admin-daycare-overview';
@@ -120,7 +121,7 @@ export default function DaycareManagement() {
             }
         };
 
-        // 🚀 NEW: Add editingDaycare to the dependency array so it re-fetches
+        // NEW: Add editingDaycare to the dependency array so it re-fetches
         // the correct list every time you click "Edit" on a different center.
         fetchTeachers();
     }, [editingDaycare]);
@@ -134,8 +135,17 @@ export default function DaycareManagement() {
         }
     }, [daycares]);
 
+    // 🚀 Original: Sends user back to the main Overview grid
     const handleBackToList = () => {
         setViewingDaycare(null);
+        setEditingDaycare(null);
+    };
+
+    // 🚀 NEW: Sends user back to the Details view after cancelling an edit
+    const handleCancelEdit = () => {
+        if (editingDaycare) {
+            setViewingDaycare(editingDaycare);
+        }
         setEditingDaycare(null);
     };
 
@@ -198,16 +208,17 @@ export default function DaycareManagement() {
         };
 
         router.patch(route('admin.daycare.update', editedData.id), mappedData, {
+            preserveState: true, // 🚀 CRITICAL: Prevents the page from resetting viewingDaycare to null!
+            preserveScroll: true,
             onSuccess: () => {
                 setEditingDaycare(null);
-                setViewingDaycare(transformDaycare(editedData));
+                setViewingDaycare(transformDaycare(editedData)); // 🚀 Restore the details view with new data
                 toast.success('Daycare updated successfully.');
             },
             onError: (errors) => {
                 console.error('Validation Errors:', errors);
                 toast.error('Update failed.');
             },
-            preserveScroll: true,
         });
     };
 
@@ -227,7 +238,7 @@ export default function DaycareManagement() {
 
     const handleEditClick = (daycare: Daycare) => {
         setEditingDaycare({ ...daycare });
-        setViewingDaycare(null);
+        setViewingDaycare(null); // Temporarily hide details while editing
     };
     const handleDeleteClick = (id: number) => {
         setSelectedDaycareId(id);
@@ -246,7 +257,7 @@ export default function DaycareManagement() {
                 availableTeachers={availableTeachers}
                 onSetEditingDaycare={setEditingDaycare}
                 onSave={handleSaveEdit}
-                onCancel={handleBackToList}
+                onCancel={handleCancelEdit} // 🚀 Now safely returns to Details View
             />
         );
     } else if (viewingDaycare) {
@@ -270,7 +281,9 @@ export default function DaycareManagement() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Daycare Management" />
-            <div className="p-4 sm:p-6 lg:p-8">
+
+            {/* 🚀 PREMIUM PAGE WRAPPER */}
+            <div className="flex-1 p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 transition-colors">
                 {content}
 
                 <Dialog
@@ -289,18 +302,43 @@ export default function DaycareManagement() {
                     />
                 </Dialog>
 
+                {/* 🚀 PREMIUM ALERT DIALOG DESIGN */}
                 <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Daycare Center</AlertDialogTitle>
-                            <AlertDialogDescription>Are you sure? This action cannot be undone.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setSelectedDaycareId(null)}>Cancel</AlertDialogCancel>
-                            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={handleConfirmDelete}>
-                                Delete
+                    <AlertDialogContent className="sm:max-w-[600px] p-0 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl bg-white dark:bg-zinc-950 transition-colors duration-200 flex flex-col">
+
+                        {/* --- PREMIUM HEADER --- */}
+                        <div className="p-6 sm:p-8 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-slate-800 transition-colors shrink-0">
+                            <AlertDialogHeader className="text-left">
+                                <div className="flex items-center gap-4 mb-2">
+                                    <div className="p-3 bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shrink-0">
+                                        <AlertTriangle className="size-6" strokeWidth={2.5} />
+                                    </div>
+                                    <AlertDialogTitle className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                        Delete Daycare Center
+                                    </AlertDialogTitle>
+                                </div>
+                                <AlertDialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 leading-relaxed mt-2 transition-colors">
+                                    Are you sure? This action cannot be undone. All data, student links, and settings tied to this branch will be permanently removed.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                        </div>
+
+                        {/* --- PREMIUM FOOTER --- */}
+                        <AlertDialogFooter className="px-6 py-5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-100 dark:border-slate-800 flex-col sm:flex-row justify-end items-center gap-3 transition-colors m-0 shrink-0">
+                            <AlertDialogCancel
+                                className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold bg-transparent border-0 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors m-0 shadow-none"
+                                onClick={() => setSelectedDaycareId(null)}
+                            >
+                                <X className="mr-2 size-5" /> Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                className="h-12 w-full sm:w-auto px-8 rounded-xl text-base font-bold text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 shadow-sm transition-colors m-0"
+                                onClick={handleConfirmDelete}
+                            >
+                                <Trash2 className="mr-2 size-5" /> Yes, Delete
                             </AlertDialogAction>
                         </AlertDialogFooter>
+
                     </AlertDialogContent>
                 </AlertDialog>
             </div>

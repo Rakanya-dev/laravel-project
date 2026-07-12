@@ -9,6 +9,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Models\Student;
 
+// 🚀 ADDED NEW IMPORTS FOR NOTIFICATIONS
+use App\Notifications\AppNotification;
+use Illuminate\Support\Facades\Notification;
+
 class MessageController extends Controller
 {
     public function index(Request $request)
@@ -37,7 +41,7 @@ class MessageController extends Controller
                 ->orderBy('created_at', 'asc')
                 ->get();
 
-            // 🚀 THE FIX: Fetch the updated Sidebar data for the Parent Tab!
+            // Fetch the updated Sidebar data for the Parent Tab!
             $allMessages = Message::where('sender_id', $userId)
                 ->orWhere('recipient_id', $userId)
                 ->latest()
@@ -62,7 +66,7 @@ class MessageController extends Controller
 
             return response()->json([
                 'initialMessages' => $activeMessages,
-                'conversations' => $updatedSidebar // 🚀 Send it to React
+                'conversations' => $updatedSidebar // Send it to React
             ]);
         }
 
@@ -146,8 +150,10 @@ class MessageController extends Controller
             $attachmentUrl = '/storage/' . $path;
         }
 
+        $sender = auth()->user();
+
         $message = Message::create([
-            'sender_id' => auth()->id(),
+            'sender_id' => $sender->id,
             'recipient_id' => $validated['recipient_id'],
             'subject' => $validated['subject'] ?? 'Chat',
             'body' => $validated['body'] ?? '',
@@ -156,6 +162,33 @@ class MessageController extends Controller
             'status' => 'unread',
         ]);
 
+        // 🚀 THE FIX: Send a Real-Time Database Notification to the Recipient
+        $recipientUser = User::find($validated['recipient_id']);
+
+        if ($recipientUser) {
+
+            // Build the message preview (truncate if it's too long, or say 'Attachment' if it's a file)
+            $previewBody = !empty($validated['body']) ? strip_tags($validated['body']) : '';
+            if (strlen($previewBody) > 50) {
+                $previewBody = substr($previewBody, 0, 47) . '...';
+            } elseif (empty($previewBody) && $attachmentUrl) {
+                $previewBody = 'Sent an attachment 📎';
+            }
+
+            // Determine where the user should be redirected when they click the notification
+            // Parents go to their dashboard tab, Admins/Teachers go to the dedicated messages page.
+            $redirectUrl = $recipientUser->role === 'parent'
+                ? route('parent.dashboard', ['tab' => 'messages']) // Assuming you handle ?tab=messages on the frontend
+                : route('messages.index', ['user' => $sender->id]);
+
+            Notification::send($recipientUser, new AppNotification(
+                'message', // Type (maps to the blue MessageSquare icon in your frontend)
+                "New message from {$sender->first_name}",
+                $previewBody,
+                $redirectUrl
+            ));
+        }
+
         if ($request->wantsJson()) {
             return response()->json(['message' => $message, 'status' => 'success']);
         }
@@ -163,7 +196,6 @@ class MessageController extends Controller
         return redirect()->back();
     }
 
-    // 🚀 THE FIXED METHOD
     private function getAllowedRecipients($user)
     {
         $allowedRecipients = collect();

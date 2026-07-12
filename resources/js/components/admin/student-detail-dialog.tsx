@@ -18,15 +18,15 @@ interface StudentDetailDialogProps {
 const getStatusBadge = (status: string) => {
     switch (status) {
         case 'Active':
-            return <Badge className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest text-[10px] hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors">Active</Badge>;
+            return <Badge className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest text-[11px] px-3 py-1 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 shadow-none transition-colors">Active</Badge>;
         case 'Graduated':
-            return <Badge className="border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 font-bold uppercase tracking-widest text-[10px] hover:bg-purple-50 dark:hover:bg-purple-500/20 transition-colors">Graduated</Badge>;
+            return <Badge className="border-purple-200 dark:border-purple-900/50 bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 font-bold uppercase tracking-widest text-[11px] px-3 py-1 hover:bg-purple-50 dark:hover:bg-purple-500/20 shadow-none transition-colors">Graduated</Badge>;
         case 'Transferred':
-            return <Badge className="border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 font-bold uppercase tracking-widest text-[10px] hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors">Transferred</Badge>;
+            return <Badge className="border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 font-bold uppercase tracking-widest text-[11px] px-3 py-1 hover:bg-blue-50 dark:hover:bg-blue-500/20 shadow-none transition-colors">Transferred</Badge>;
         case 'Inactive':
-            return <Badge className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors">Inactive</Badge>;
+            return <Badge className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800 text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-[11px] px-3 py-1 hover:bg-slate-50 dark:hover:bg-zinc-700 shadow-none transition-colors">Inactive</Badge>;
         default:
-            return <Badge variant="outline" className="border-slate-200 dark:border-slate-700 font-bold uppercase tracking-widest text-[10px] text-slate-700 dark:text-slate-300 transition-colors">{status}</Badge>;
+            return <Badge variant="outline" className="border-slate-200 dark:border-slate-700 font-bold uppercase tracking-widest text-[11px] px-3 py-1 text-slate-700 dark:text-slate-300 shadow-none transition-colors">{status}</Badge>;
     }
 };
 
@@ -41,103 +41,105 @@ export function StudentDetailDialog({ student, onOpenChange, onOpenEdit }: Stude
     const isActuallyArchived = student.archived || ['Graduated', 'Transferred', 'Inactive'].includes(student.status);
 
     return (
-        <DialogContent className="sm:max-w-[750px] p-0 overflow-hidden bg-slate-100 dark:bg-zinc-950 rounded-2xl border-slate-200 dark:border-slate-800 shadow-lg transition-colors duration-200">
+        <DialogContent hideClose className="sm:max-w-[800px] p-0 overflow-hidden bg-slate-100 dark:bg-zinc-950 rounded-2xl border-slate-200 dark:border-slate-800 shadow-2xl transition-colors duration-200">
             {/* --- HEADER --- */}
-            <DialogHeader className="p-6 pb-5 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 shadow-sm z-10 flex flex-row items-center justify-between sticky top-0 transition-colors">
-                <div className="flex items-center gap-4">
-                    <div className="flex size-14 shrink-0 items-center justify-center rounded-full border-4 border-white dark:border-zinc-900 bg-indigo-50 dark:bg-indigo-500/20 text-xl font-black text-indigo-700 dark:text-indigo-400 shadow-sm ring-1 ring-slate-100 dark:ring-slate-800 transition-colors">
+            <DialogHeader className="bg-white dark:bg-zinc-900 px-6 py-6 sm:px-8 border-b border-slate-100 dark:border-slate-800 shadow-sm transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0 text-left sm:text-left z-10 relative">
+                <div className="flex items-center gap-5">
+                    <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border-4 border-white dark:border-zinc-900 bg-indigo-50 dark:bg-indigo-500/20 text-2xl font-black text-indigo-700 dark:text-indigo-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 transition-colors">
                         {getInitials(student.firstName, student.lastName)}
                     </div>
-                    <div>
-                        <DialogTitle className="text-2xl font-extrabold text-slate-900 dark:text-white transition-colors">{fullName}</DialogTitle>
-                        <DialogDescription className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2 transition-colors">
+                    <div className="mt-1">
+                        <DialogTitle className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white transition-colors break-words">
+                            {fullName}
+                        </DialogTitle>
+                        <DialogDescription className="text-base font-medium text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2 transition-colors">
                             Official Learner Profile
                         </DialogDescription>
                     </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 mt-0">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Current Status</p>
+                <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-2 mt-0">
+                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block transition-colors">Current Status</p>
                     {getStatusBadge(student.status)}
                 </div>
             </DialogHeader>
 
             {/* --- BODY --- */}
-            <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6 scrollbar-thin dark:scrollbar-thumb-zinc-700 transition-colors">
+            <div className="p-6 sm:p-8 overflow-y-auto max-h-[65vh] space-y-8 custom-scrollbar bg-slate-50 dark:bg-zinc-950/30 transition-colors">
 
                 {/* SECTION 1: Learner Identity */}
-                <section className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
-                    <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-3 transition-colors">
-                        <Baby className="size-4 text-indigo-500 dark:text-indigo-400" /> Learner Identity
+                <section className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+                    <h3 className="flex items-center gap-3 text-base font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-4 transition-colors">
+                        <Baby className="size-5 text-indigo-500 dark:text-indigo-400" /> Learner Identity
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
                         <div className="sm:col-span-2">
-                            <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Date of Birth & Age</Label>
-                            <div className="mt-1.5 flex items-center gap-3 text-sm font-bold text-slate-900 dark:text-slate-100 transition-colors">
+                            <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Date of Birth & Age</Label>
+                            <div className="mt-2.5 flex flex-wrap items-center gap-3 text-base font-bold text-slate-900 dark:text-slate-100 transition-colors">
                                 <span className="flex items-center gap-2">
-                                    <CalendarDays className="size-4 text-indigo-400 dark:text-indigo-500" />
+                                    <CalendarDays className="size-5 text-indigo-400 dark:text-indigo-500" />
                                     {formatPHDate(student.dateOfBirth)}
                                 </span>
-                                <span className="text-slate-300 dark:text-slate-700">•</span>
-                                <span className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded-md text-xs transition-colors">
-                                    <Activity className="size-3" />
+                                <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+                                <span className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/20 px-3 py-1 rounded-lg text-sm transition-colors">
+                                    <Activity className="size-4" />
                                     {calculateAge(student.dateOfBirth)} years old
                                 </span>
                             </div>
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Gender</Label>
-                            <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-slate-100 transition-colors">{student.gender || 'Not specified'}</p>
+                            <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Gender</Label>
+                            <p className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100 transition-colors">{student.gender || 'Not specified'}</p>
                         </div>
                         <div>
-                            <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Known As</Label>
-                            <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-slate-100 transition-colors">{student.nickname ? `"${student.nickname}"` : 'N/A'}</p>
+                            <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Known As</Label>
+                            <p className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100 transition-colors">{student.nickname ? `"${student.nickname}"` : 'N/A'}</p>
                         </div>
                     </div>
                 </section>
 
                 {/* SECTION 2: Center Placement & Guardian */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <section className="bg-indigo-50/30 dark:bg-indigo-500/10 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm space-y-5 relative overflow-hidden transition-colors">
-                        <div className="absolute -right-6 -top-6 size-24 rounded-full bg-indigo-100 dark:bg-indigo-500/20 blur-2xl transition-colors"></div>
-                        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-indigo-900 dark:text-indigo-300 uppercase border-b border-indigo-100 dark:border-indigo-500/20 pb-3 relative z-10 transition-colors">
-                            <Building2 className="size-4 text-indigo-500 dark:text-indigo-400" /> Placement
+                    <section className="bg-indigo-50/30 dark:bg-indigo-500/10 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 shadow-sm space-y-6 relative overflow-hidden transition-colors">
+                        <div className="absolute -right-8 -top-8 size-32 rounded-full bg-indigo-100 dark:bg-indigo-500/20 blur-3xl transition-colors"></div>
+                        <h3 className="flex items-center gap-3 text-base font-extrabold tracking-widest text-indigo-900 dark:text-indigo-300 uppercase border-b border-indigo-100 dark:border-indigo-500/20 pb-4 relative z-10 transition-colors">
+                            <Building2 className="size-5 text-indigo-500 dark:text-indigo-400" /> Placement
                         </h3>
-                        <div className="space-y-5 relative z-10">
+                        <div className="space-y-6 relative z-10">
                             <div>
-                                <Label className="text-[10px] font-bold text-indigo-400/80 dark:text-indigo-400/60 uppercase tracking-widest transition-colors">Daycare Center</Label>
-                                <p className="mt-1.5 text-base font-extrabold text-indigo-950 dark:text-indigo-100 transition-colors">{student.daycare}</p>
+                                <Label className="text-[11px] font-bold text-indigo-400/80 dark:text-indigo-400/60 uppercase tracking-widest transition-colors">Daycare Center</Label>
+                                <p className="mt-2.5 text-lg font-black text-indigo-950 dark:text-indigo-100 transition-colors">{student.daycare}</p>
                             </div>
                             <div>
-                                <Label className="text-[10px] font-bold text-indigo-400/80 dark:text-indigo-400/60 uppercase tracking-widest transition-colors">Assigned Session</Label>
-                                <p className="mt-1.5 text-sm font-bold text-indigo-800 dark:text-indigo-300 transition-colors">
-                                    {student.section_name || (student.section_id ? 'Assigned' : 'Unassigned')}
+                                <Label className="text-[11px] font-bold text-indigo-400/80 dark:text-indigo-400/60 uppercase tracking-widest transition-colors">Assigned Session</Label>
+                                <p className="mt-2.5 text-base font-bold text-indigo-800 dark:text-indigo-300 transition-colors">
+                                    {student.section_name || (student.section_id ? 'Assigned' : 'Unassigned Session')}
                                 </p>
                             </div>
                         </div>
                     </section>
 
-                    <section className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
-                        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-3 transition-colors">
-                            <Users className="size-4 text-indigo-500 dark:text-indigo-400" /> Guardian Info
+                    <section className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+                        <h3 className="flex items-center gap-3 text-base font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-4 transition-colors">
+                            <Users className="size-5 text-indigo-500 dark:text-indigo-400" /> Guardian Info
                         </h3>
-                        <div className="space-y-5">
+                        <div className="space-y-6">
                             <div>
-                                <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Primary Guardian Name</Label>
-                                <p className="mt-1.5 text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 transition-colors">
-                                    <UserCircle2 className="size-4 text-slate-400 dark:text-slate-500" />
+                                <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Primary Guardian Name</Label>
+                                <p className="mt-2.5 text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2.5 transition-colors">
+                                    <UserCircle2 className="size-5 text-slate-400 dark:text-slate-500" />
                                     {student.parentName || 'N/A'}
                                 </p>
                             </div>
                             <div>
-                                <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Mobile App Access</Label>
-                                <div className="mt-1.5">
+                                <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Mobile App Access</Label>
+                                <div className="mt-2.5">
                                     {student.parentLinked ? (
-                                        <Badge className="border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 transition-colors">
-                                            <ClipboardCheck className="mr-1.5 size-3" /> Account Linked
+                                        <Badge className="border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1 text-[11px] font-bold tracking-widest uppercase text-indigo-700 dark:text-indigo-400 shadow-none transition-colors">
+                                            <ClipboardCheck className="mr-2 size-4" /> Account Linked
                                         </Badge>
                                     ) : (
-                                        <Badge variant="outline" className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800 px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase text-slate-500 dark:text-slate-400 shadow-none transition-colors">
+                                        <Badge variant="outline" className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-zinc-800 px-3 py-1 text-[11px] font-bold tracking-widest uppercase text-slate-500 dark:text-slate-400 shadow-none transition-colors">
                                             Not Linked Yet
                                         </Badge>
                                     )}
@@ -150,17 +152,17 @@ export function StudentDetailDialog({ student, onOpenChange, onOpenEdit }: Stude
                 {/* 🚀 SECTION 3: Unified General Notes */}
                 <section className="space-y-6">
                     {/* General Notes Block (Shows for both Active and Archived if it exists) */}
-                    <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 transition-colors">
-                        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-3 transition-colors">
-                            <FileText className="size-4 text-indigo-500 dark:text-indigo-400" /> General Notes & Remarks
+                    <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6 transition-colors">
+                        <h3 className="flex items-center gap-3 text-base font-extrabold tracking-widest text-slate-800 dark:text-slate-200 uppercase border-b border-slate-100 dark:border-slate-800 pb-4 transition-colors">
+                            <FileText className="size-5 text-indigo-500 dark:text-indigo-400" /> General Notes & Remarks
                         </h3>
                         <div>
-                            <Label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Additional Background</Label>
-                            <div className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-zinc-950 p-4 rounded-xl border border-slate-100 dark:border-slate-800 min-h-[80px] transition-colors">
+                            <Label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Additional Background</Label>
+                            <div className="mt-3 text-base font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-zinc-950 p-5 rounded-xl border border-slate-100 dark:border-slate-800 min-h-[120px] transition-colors">
                                 {student.notes ? (
                                     student.notes
                                 ) : (
-                                    <span className="text-slate-400 dark:text-slate-600 italic">No additional background or notes recorded.</span>
+                                    <span className="text-slate-400 dark:text-slate-600 italic transition-colors">No additional background or notes recorded.</span>
                                 )}
                             </div>
                         </div>
@@ -168,14 +170,14 @@ export function StudentDetailDialog({ student, onOpenChange, onOpenEdit }: Stude
 
                     {/* Amber Archive Reason Sticky Note (Only shows if Archived) */}
                     {isActuallyArchived && student.archiveReason && (
-                        <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 p-5 shadow-sm transition-colors">
+                        <div className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-500/10 p-6 shadow-sm transition-colors">
                             <div className="flex items-start gap-4">
-                                <div className="rounded-full bg-amber-100 dark:bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 transition-colors">
-                                    <StickyNote className="size-5" />
+                                <div className="rounded-xl bg-amber-100 dark:bg-amber-500/20 p-3 text-amber-600 dark:text-amber-400 transition-colors">
+                                    <StickyNote className="size-6" />
                                 </div>
                                 <div>
-                                    <p className="mb-1 text-[11px] font-bold tracking-wide text-amber-800 dark:text-amber-500 uppercase transition-colors">Archive Reason</p>
-                                    <p className="text-sm font-medium leading-relaxed text-slate-800 dark:text-amber-100 italic transition-colors">"{student.archiveReason}"</p>
+                                    <p className="mb-1.5 text-[11px] font-bold tracking-widest text-amber-800 dark:text-amber-500 uppercase transition-colors">Archive Reason</p>
+                                    <p className="text-base font-medium leading-relaxed text-slate-800 dark:text-amber-100 italic transition-colors">"{student.archiveReason}"</p>
                                 </div>
                             </div>
                         </div>
@@ -185,20 +187,20 @@ export function StudentDetailDialog({ student, onOpenChange, onOpenEdit }: Stude
             </div>
 
             {/* --- FOOTER --- */}
-            <DialogFooter className="p-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex flex-row justify-between items-center sm:justify-between rounded-b-2xl transition-colors">
-                <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 h-11 rounded-xl font-bold transition-colors">
-                    <X className="mr-2 size-4" /> Close Profile
+            <DialogFooter className="px-6 py-5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-zinc-900 flex-col sm:flex-row justify-end items-center gap-3 transition-colors m-0 print:hidden">
+                <Button variant="ghost" onClick={() => onOpenChange(false)} className="h-12 w-full sm:w-auto px-6 rounded-xl text-base font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    <X className="mr-2 size-5" /> Close Profile
                 </Button>
 
                 {!isActuallyArchived && (
                     <Button
-                        className="bg-indigo-600 dark:bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-500 shadow-sm h-11 rounded-xl font-bold transition-colors"
+                        className="h-12 w-full sm:w-auto px-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-base font-bold shadow-sm transition-colors"
                         onClick={() => {
                             onOpenChange(false);
                             onOpenEdit(student);
                         }}
                     >
-                        <Edit2 className="mr-2 size-4" />
+                        <Edit2 className="mr-2 size-5" />
                         Edit Learner Record
                     </Button>
                 )}

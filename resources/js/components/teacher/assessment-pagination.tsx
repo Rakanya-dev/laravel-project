@@ -10,51 +10,47 @@ interface AssessmentPaginationProps {
 }
 
 export function AssessmentPagination({ currentPage, totalPages, totalItems, itemsPerPage, onPageChange }: AssessmentPaginationProps) {
+    if (totalItems === 0) return null;
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
     return (
-        <div className="flex items-center justify-between border-t bg-slate-50 px-4 py-3 sm:px-6">
-            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                    <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
-                        <span className="font-medium">{totalItems}</span> students
-                    </p>
-                </div>
-                <div>
-                    <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:opacity-50"
-                            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="flex items-center px-4 text-sm font-semibold text-gray-900 ring-1 ring-gray-300 ring-inset">
-                            {currentPage} / {totalPages}
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:opacity-50"
-                            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </nav>
+        <div className="flex flex-col items-center justify-between gap-4 rounded-b-2xl border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-zinc-900/50 p-6 sm:flex-row sm:px-8 transition-colors print:hidden">
+
+            {/* Left: Item Counter */}
+            <div className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                Showing <span className="mx-1 font-black text-slate-900 dark:text-white">{startItem}-{endItem}</span> of <span className="mx-1 font-black text-slate-900 dark:text-white">{totalItems}</span> students
+            </div>
+
+            {/* Right: Controls */}
+            <div className="flex items-center gap-5">
+                <span className="hidden sm:block text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 transition-colors">
+                    Page <span className="mx-1 font-black text-slate-900 dark:text-white">{currentPage}</span> of <span className="mx-1 font-black text-slate-900 dark:text-white">{totalPages}</span>
+                </span>
+
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-12 rounded-xl border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-zinc-900 dark:text-slate-400 dark:hover:bg-zinc-800"
+                        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        <ChevronLeft className="size-6" />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-12 rounded-xl border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-zinc-900 dark:text-slate-400 dark:hover:bg-zinc-800"
+                        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        <ChevronRight className="size-6" />
+                    </Button>
                 </div>
             </div>
-            {/* Mobile View */}
-            <div className="flex flex-1 justify-between sm:hidden">
-                <Button variant="outline" onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>
-                    Previous
-                </Button>
-                <Button variant="outline" onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>
-                    Next
-                </Button>
-            </div>
+
         </div>
     );
 }

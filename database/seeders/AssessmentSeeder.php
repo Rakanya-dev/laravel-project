@@ -41,65 +41,74 @@ class AssessmentSeeder extends Seeder
             $dob = Carbon::parse($student->date_of_birth);
 
             // 🚀 REALISTIC SCENARIO 1: Student Archetypes
-            // 60% Average, 20% Advanced, 20% Needs Monitoring
             $randArchetype = rand(1, 100);
             if ($randArchetype <= 20) {
                 $profile = 'Advanced';
-                $baseAbility = rand(75, 85) / 100; // Starts strong
-                $growthRate = 0.08; // Steady growth
+                $baseAbility = rand(75, 85) / 100;
+                $growthRate = 0.08;
             } elseif ($randArchetype <= 80) {
                 $profile = 'Average';
-                $baseAbility = rand(50, 65) / 100; // Starts average
-                $growthRate = 0.12; // Good growth over the year
+                $baseAbility = rand(50, 65) / 100;
+                $growthRate = 0.12;
             } else {
                 $profile = 'Delayed';
-                $baseAbility = rand(30, 45) / 100; // Starts low
-                $growthRate = 0.10; // Slower, steady growth
+                $baseAbility = rand(30, 45) / 100;
+                $growthRate = 0.10;
             }
 
             // 🚀 REALISTIC SCENARIO 2: Persistent Weakness
-            // Pick 1 specific domain this child consistently struggles with
             $weakDomainId = $domainModels->random()->id;
 
-            // Determine timeline (Simulate a standard School Year)
-            $count = rand(2, 3); // Most kids have at least 2 assessments
+            // Determine timeline
+            $count = rand(2, 3);
             $types = [
-                ['name' => '1st Assessment', 'offset' => 8, 'semester' => '1st Semester'], // e.g., September
-                ['name' => '2nd Assessment', 'offset' => 4, 'semester' => '2nd Semester'], // e.g., January
-                ['name' => '3rd Assessment', 'offset' => 0, 'semester' => 'Year-End']      // e.g., May
+                ['name' => '1st Assessment', 'offset' => 8, 'semester' => '1st Semester'],
+                ['name' => '2nd Assessment', 'offset' => 4, 'semester' => '2nd Semester'],
+                ['name' => '3rd Assessment', 'offset' => 0, 'semester' => 'Year-End']
             ];
             $studentPlan = array_slice($types, 0, $count);
 
             foreach ($studentPlan as $idx => $plan) {
-                // Ability increases with each assessment
                 $currentAbility = min(1.0, $baseAbility + ($growthRate * $idx));
                 $date = Carbon::now()->subMonths($plan['offset'])->subDays(rand(1, 5));
 
                 $evalAgeYears = $dob->diffInYears($date);
                 $evalAgeMonths = $dob->diffInMonths($date) % 12;
-                $formType = ($evalAgeYears < 3) ? 'record_1' : 'record_2';
+                $totalMonths = ($evalAgeYears * 12) + $evalAgeMonths;
+
+                // 🚀 ITED vs ECCD check
+                $isEccd = $totalMonths >= 36;
+                $formType = $isEccd ? 'record_2' : 'record_1';
 
                 $scoresPayload = [];
                 $sumScaled = 0;
+                $totalRaw = 0;
+                $totalMaxPossible = 0;
                 $lowestDomainId = null;
                 $lowestPct = 100;
 
                 foreach ($domainModels as $domain) {
                     $maxRaw = $domain->max_score ?? 20;
 
-                    // 🚀 REALISTIC SCENARIO 3: Domain-Specific Math
                     $domainAbility = $currentAbility;
                     if ($domain->id === $weakDomainId) {
-                        $domainAbility -= 0.15; // 15% penalty on their weak domain
+                        $domainAbility -= 0.15;
                     }
 
-                    // Add a tiny bit of random daily variance (-1 to +1 raw score)
                     $variance = rand(-1, 1);
                     $raw = round($maxRaw * $domainAbility) + $variance;
-                    $raw = max(0, min($maxRaw, $raw)); // Clamp between 0 and max_score
+                    $raw = max(0, min($maxRaw, $raw));
 
-                    $scaled = $scoringService->getScaledScore($domain->name, $raw, $evalAgeYears, $evalAgeMonths);
-                    $sumScaled += $scaled;
+                    // 🚀 Track Raw Scores for ITED
+                    $totalRaw += $raw;
+                    $totalMaxPossible += $maxRaw;
+
+                    $scaled = $scoringService->getScaledScore($domain->id, $raw, $evalAgeYears, $evalAgeMonths);
+
+                    // Only sum core domains for ECCD
+                    if ($domain->is_core) {
+                        $sumScaled += $scaled;
+                    }
 
                     $pct = $maxRaw > 0 ? ($raw / $maxRaw) : 0;
                     if ($pct < $lowestPct) {
@@ -116,9 +125,18 @@ class AssessmentSeeder extends Seeder
                     ];
                 }
 
-                $standardScore = $scoringService->getStandardScore($sumScaled);
-                $overallRating = $scoringService->getOverallInterpretation($standardScore, $evalAgeYears, $evalAgeMonths);
-                $nextDate = $scoringService->calculateNextDueDate($standardScore, $date->toDateString(), $evalAgeYears);
+                // 🚀 PROPERLY ISOLATE ITED AND ECCD MATH
+                if ($isEccd) {
+                    $finalScore = $scoringService->getStandardScore($sumScaled);
+                    $overallRating = $scoringService->getOverallInterpretation($finalScore, $evalAgeYears, $evalAgeMonths);
+                    $sumOfScaledToSave = $sumScaled;
+                } else {
+                    $finalScore = $totalRaw;
+                    $overallRating = $scoringService->getOverallInterpretation($totalRaw, $evalAgeYears, $evalAgeMonths, $totalMaxPossible);
+                    $sumOfScaledToSave = null; // ITED does not use Sum of Scaled!
+                }
+
+                $nextDate = $scoringService->calculateNextDueDate($finalScore, $date->toDateString(), $evalAgeYears);
 
                 // Create Assessment
                 $assessment = Assessment::create([
@@ -134,8 +152,8 @@ class AssessmentSeeder extends Seeder
                     'semester'             => $plan['semester'],
                     'age_years'            => $evalAgeYears,
                     'age_months'           => $evalAgeMonths,
-                    'overall_score'        => $standardScore,
-                    'sum_of_scaled'        => $sumScaled,
+                    'overall_score'        => $finalScore,
+                    'sum_of_scaled'        => $sumOfScaledToSave,
                     'overall_rating'       => $overallRating,
                     'completed_at'         => $date,
                     'next_assessment_date' => $nextDate,
@@ -154,7 +172,6 @@ class AssessmentSeeder extends Seeder
                         'scaled_score'  => $sp['scaled'],
                         'max_score'     => $sp['max_score'],
                         'is_included'   => true,
-                        // Only add teacher notes if it's an area of concern
                         'notes'         => $isWeakest ? $this->generateRecommendation($sp['domain_name']) : null,
                         'created_at'    => $date,
                         'updated_at'    => $date,

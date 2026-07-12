@@ -14,8 +14,10 @@
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/fortify": "^1.36",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.10",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
+        "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-activitylog": "^4.10",
         "tightenco/ziggy": "^2.4"
     },
@@ -59,7 +61,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#8b5cf6\" \"php artisan serve --no-reload\" \"php artisan queue:listen --tries=1\" \"npm run dev\""
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#8b5cf6\" \"php artisan serve --no-reload\" \"php artisan queue:listen --tries=1\" \"npm run dev\" \"php artisan reverb:start\""
         ],
         "dev:ssr": [
             "npm run build:ssr",
