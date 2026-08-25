@@ -1,0 +1,634 @@
+Installation & Access Credentials Guide
+Centralized Assessment Record System for GMA Child Development Center
+
+================================================================================
+SYSTEM OVERVIEW
+================================================================================
+
+Application Name: Centralized Assessment Record System
+Version: Laravel 12 + React 19 + TypeScript
+Repository: https://github.com/Rakanya-dev/laravel-project
+Production URL: https://laravel-project-snowy-seven.vercel.app
+Last Updated: August 2026
+
+Technology Stack:
+- Backend: Laravel 12 (PHP 8.2+)
+- Frontend: React 19 with TypeScript (76.6%)
+- Backend PHP: 19.5%
+- Blade Templates: 2.6%
+- Database: MySQL 5.7+ or SQLite (default)
+- Build Tool: Vite 6
+- UI Framework: Radix UI + Tailwind CSS 4
+
+================================================================================
+QUICK START - LOCAL DEVELOPMENT ACCESS
+================================================================================
+
+Frontend URL: http://localhost:5173
+Backend URL: http://localhost:8000
+Database: SQLite (database/database.sqlite)
+
+Prerequisites:
+- PHP 8.2 or higher
+- Node.js 18.x or higher
+- npm 10.x or higher
+- Composer (latest)
+- 2GB RAM minimum
+- 500MB free disk space
+
+================================================================================
+INSTALLATION STEPS
+================================================================================
+
+Step 1: Clone Repository
+Command: git clone https://github.com/Rakanya-dev/laravel-project.git
+Command: cd laravel-project
+
+Step 2: Install PHP Dependencies
+Command: composer install
+
+Step 3: Install Node.js Dependencies
+Command: npm install
+
+Step 4: Setup Environment File
+Command: cp .env.example .env
+Command: php artisan key:generate
+
+Step 5: Configure Database (.env file)
+
+Option A - SQLite (Default - No Setup Required):
+DB_CONNECTION=sqlite
+Database file auto-creates at: database/database.sqlite
+
+Option B - MySQL (Production Recommended):
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=(your password)
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+
+Create MySQL Database:
+mysql -u root -p
+CREATE DATABASE laravel;
+EXIT;
+
+Step 6: Run Database Migrations & Seed Data
+Command: php artisan migrate
+Command: php artisan db:seed
+
+Step 7: Build Frontend Assets
+Command: npm run build (production)
+Command: npm run dev (development with hot reload)
+
+Step 8: Start Application
+
+Option A - Run Everything Together (Recommended):
+Command: npm run start
+
+This launches:
+- PHP Development Server (port 8000)
+- Vite Development Server (port 5173)
+- Queue Listener (background jobs)
+- Laravel Reverb (WebSockets)
+
+Option B - Run Services Separately:
+Terminal 1: php artisan serve
+Terminal 2: npm run dev
+Terminal 3: php artisan queue:listen --tries=1
+
+Step 9: Access Application
+Open http://localhost:5173 in your web browser
+
+================================================================================
+DEFAULT ADMIN CREDENTIALS
+================================================================================
+
+Primary Admin Account (Auto-created during seeding):
+
+EMAIL: laravelkidtrak@gmail.com
+PASSWORD: password123
+ROLE: Administrator
+FIRST_NAME: Juan
+MIDDLE_NAME: Dela
+LAST_NAME: Cruz
+PHONE: +639170000000
+STATUS: Active
+
+Access URL: http://localhost:5173/login
+Dashboard URL: http://localhost:5173/admin/dashboard
+
+IMPORTANT: Change this password immediately after first login!
+
+================================================================================
+VIP TEST ACCOUNTS
+================================================================================
+
+These parent accounts are auto-created when running seeders.
+
+VIP PARENT ACCOUNT 1:
+Email: maria.gammad@gmail.com
+Password: (Auto-generated - Reset on first login)
+Role: Parent/Guardian
+Name: Maria Gammad
+Phone: +63 917 123 4567
+Relation to Child: Mother
+
+Associated Child:
+Name: Ezmielle Zicus Reyes Gammad
+Gender: Female
+Date of Birth: 2021-10-15
+Nickname: Ezmi
+Daycare: Sto. Nino Child Development Center
+
+---
+
+VIP PARENT ACCOUNT 2:
+Email: juan.cruz@gmail.com
+Password: (Auto-generated - Reset on first login)
+Role: Parent/Guardian
+Name: Juan Cruz
+Phone: +63 918 222 3333
+Relation to Child: Father
+
+Associated Child:
+Name: Elijah Ramos Cruz
+Gender: Male
+Date of Birth: 2020-05-20
+Nickname: Eli
+Daycare: Sto. Nino Child Development Center
+
+================================================================================
+USER ROLES & ACCESS LEVELS
+================================================================================
+
+1. ADMINISTRATOR ROLE
+Access Level: Full System Access
+
+Permissions:
+✓ View system-wide dashboard and metrics
+✓ Manage all staff and user accounts
+✓ Create and approve teacher accounts
+✓ Manage daycare centers and sections
+✓ Approve/reject student enrollments
+✓ Verify enrollment documents
+✓ Create and manage assessment domains
+✓ Generate compliance and analytics reports
+✓ Send messages to all users
+✓ Archive/restore student and staff records
+✓ Configure system settings
+✓ View all user activity logs
+
+Login Route: /admin/dashboard
+Dashboard Metrics:
+- Total learners and active learners
+- Pending enrollment count
+- Assessment completion rates
+- Active staff count
+- Recent user activity feed
+- System health status
+
+---
+
+2. TEACHER (CDW) ROLE
+Access Level: Limited to Assigned Students & Classes
+
+Permissions:
+✓ View assigned students in own section
+✓ Create ECCD and ITED assessments
+✓ Edit and mark assessments as complete
+✓ Flag assessments for review
+✓ View student assessment history
+✓ Generate class reports
+✓ Send messages to parents and admins
+✓ Archive/restore student records
+✓ Export class roster
+✗ Cannot approve enrollments
+✗ Cannot create daycares or sections
+✗ Cannot manage other teachers
+✗ Cannot create assessment domains
+✗ Cannot import students via CSV
+
+Login Route: /teacher/dashboard
+Dashboard Metrics:
+- Total students in assigned section
+- Total assessments completed
+- Pending assessments due
+- Class average score
+- Student roster by section
+
+---
+
+3. PARENT/GUARDIAN ROLE
+Access Level: Limited to Own Children Only
+
+Permissions:
+✓ Create child enrollment
+✓ Upload enrollment documents
+✓ View child's assessment history
+✓ Download and print report cards
+✓ View child's progress and scores
+✓ Send messages to teachers
+✓ Link additional guardians to child
+✓ Accept guardian link invitations
+✓ Update profile information
+✓ Change password
+✓ Download personal reports
+✗ Cannot see other parents' children
+✗ Cannot create assessments
+✗ Cannot approve enrollments
+✗ Cannot manage system settings
+✗ Cannot access admin features
+
+Login Route: /login (auto-redirects to dashboard)
+Dashboard Features:
+- View all enrolled children
+- Enrollment status per child
+- Quick access to assessments
+- Latest report cards
+- Pending notifications
+
+================================================================================
+DATABASE CONFIGURATION
+================================================================================
+
+Database Drivers Supported:
+1. SQLite (Default - Local Development)
+2. MySQL (Recommended - Production)
+3. PostgreSQL (For Large-Scale Apps)
+4. SQL Server (Enterprise Environments)
+
+SQLite Configuration (Default):
+DB_CONNECTION=sqlite
+Database Location: database/database.sqlite
+No username/password required
+Best for: Local development, testing
+
+MySQL Configuration (Production):
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=(your password)
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+Strict Mode: Enabled
+Foreign Key Constraints: Enabled
+
+PostgreSQL Configuration:
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=laravel
+DB_USERNAME=postgres
+DB_PASSWORD=(your password)
+DB_CHARSET=utf8
+Search Path: public
+
+Direct Database Access:
+
+MySQL Connection:
+Host: 127.0.0.1 (localhost)
+Port: 3306
+Username: root
+Password: (your MySQL password)
+Database: laravel
+Charset: utf8mb4
+
+Command Line Access:
+mysql -u root -p -h 127.0.0.1
+USE laravel;
+SHOW TABLES;
+
+SQLite File Access:
+Path: /path/to/laravel-project/database/database.sqlite
+sqlite3 database/database.sqlite
+
+Database Tables Created:
+- users (system user accounts)
+- daycares (daycare centers)
+- sections (classroom sections)
+- students (child enrollment records)
+- student_guardians (parent relationships)
+- assessments (assessment records)
+- assessment_domains (domain definitions)
+- eccd_scorings (ECCD assessment scores)
+- messages (user messaging)
+- sessions (session storage)
+- cache (application cache)
+- migrations (migration history)
+
+================================================================================
+CREATING NEW USER ACCOUNTS
+================================================================================
+
+Method 1: Via Admin Dashboard
+
+Create Administrator:
+1. Log in as admin
+2. Go to Admin > Staff & Users
+3. Click "Add New Staff"
+4. Select role: Administrator
+5. Fill form: Name, Email, Phone
+6. Set Status: Active
+7. Click "Create User"
+8. New admin receives welcome email with temporary password
+
+Create Teacher:
+1. Log in as admin
+2. Go to Admin > Staff & Users
+3. Click "Add New Staff"
+4. Select role: Teacher (CDW)
+5. Fill form: Name, Email, Phone, Daycare, Section
+6. Set Status: Active
+7. Click "Create User"
+8. Teacher receives welcome email with temporary password
+
+---
+
+Method 2: Parent Self-Registration
+
+1. Navigate to http://localhost:5173/login
+2. Click "Don't have an account? Register"
+3. Fill registration form:
+   - First Name, Middle Name (optional), Last Name
+   - Email (must be unique)
+   - Phone (format: +63XXXXXXXXXX)
+   - Password (8+ chars, uppercase, lowercase, number, special char)
+   - Confirm Password
+4. Click "Register"
+5. Account created immediately
+6. Check email for verification link
+7. Click verification link to activate
+8. Log in to enroll children
+
+---
+
+Method 3: Using Artisan Command Line
+
+Create Admin User:
+php artisan tinker
+>>> use App\Models\User;
+>>> use Illuminate\Support\Facades\Hash;
+>>> User::create([
+    'email' => 'newadmin@example.com',
+    'password' => Hash::make('SecurePassword123!'),
+    'role' => 'admin',
+    'first_name' => 'John',
+    'last_name' => 'Doe',
+    'phone' => '+639171234567',
+    'status' => 'Active',
+    'email_verified_at' => now(),
+]);
+
+Create Teacher User:
+>>> User::create([
+    'email' => 'teacher@example.com',
+    'password' => Hash::make('SecurePassword123!'),
+    'role' => 'teacher',
+    'daycare_id' => 1,
+    'first_name' => 'Maria',
+    'last_name' => 'Santos',
+    'phone' => '+639171234567',
+    'status' => 'Active',
+    'email_verified_at' => now(),
+]);
+
+Create Parent User:
+>>> User::create([
+    'email' => 'parent@example.com',
+    'password' => Hash::make('SecurePassword123!'),
+    'role' => 'parent',
+    'first_name' => 'Jose',
+    'last_name' => 'Garcia',
+    'phone' => '+639171234567',
+    'status' => 'Active',
+    'email_verified_at' => now(),
+]);
+
+Password Requirements:
+- Minimum 8 characters
+- Uppercase letter (A-Z)
+- Lowercase letter (a-z)
+- Number (0-9)
+- Special character (!@#$%^&*)
+
+Email Requirements:
+- Valid email format (user@domain.com)
+- Must be unique
+- Must be verified before full access
+
+================================================================================
+ACCOUNT ACCESS FLOW
+================================================================================
+
+ADMINISTRATOR LOGIN FLOW:
+1. Navigate to http://localhost:5173/login
+2. Enter email: laravelkidtrak@gmail.com
+3. Enter password: password123
+4. Click "Login"
+5. Redirected to /admin/dashboard
+6. Access granted to all admin features:
+   - Dashboard with system metrics
+   - Staff & users management
+   - Daycare centers management
+   - Student enrollment approvals
+   - Assessment domain configuration
+   - Report generation
+   - System messaging
+   - Settings and configuration
+
+TEACHER LOGIN FLOW:
+1. Navigate to http://localhost:5173/login
+2. Enter assigned email and password
+3. Click "Login"
+4. Email verification required (if first login)
+5. Click verification link in email
+6. Log in again
+7. Redirected to /teacher/dashboard
+8. Access to teacher-specific features:
+   - Assigned students view
+   - Assessment creation and management
+   - Class metrics
+   - Messaging
+   - Student record management
+
+PARENT LOGIN FLOW:
+1. Navigate to http://localhost:5173/login
+2. Click "Register" (if new user)
+3. Fill registration form with name, email, phone, password
+4. Click "Register"
+5. Check email for verification link
+6. Click verification link to confirm
+7. Return to login page
+8. Enter email and password
+9. Click "Login"
+10. Redirected to /dashboard
+11. Access to parent features:
+    - Enroll children
+    - View assessments
+    - Download reports
+    - Send messages
+    - Manage guardians
+
+================================================================================
+TROUBLESHOOTING ACCESS ISSUES
+================================================================================
+
+Issue: "Invalid Credentials" Error
+Cause: Email/password combination doesn't exist
+Solution:
+- Double-check email spelling (case-insensitive)
+- Verify password exactly as set
+- Use "Forgot Password" to reset
+- Ensure account has been created/seeded
+
+---
+
+Issue: "Email Not Verified"
+Cause: User hasn't confirmed email address
+Solution:
+- Check inbox for verification email
+- Click verification link
+- Check spam/junk folder
+- Request resend on login page
+
+---
+
+Issue: "Account Pending Approval"
+Cause: Admin hasn't approved teacher/user yet
+Solution:
+- Contact administrator
+- Admin goes to Admin > Staff & Users > Pending
+- Admin clicks "Approve"
+- User receives notification
+
+---
+
+Issue: "Cannot Connect to Database"
+Error: SQLSTATE HY000 (2002) - Connection refused
+Solution:
+- Ensure MySQL is running
+- Verify .env file has correct DB credentials
+- Test connection: mysql -u root -p -h 127.0.0.1
+- Check MySQL port is 3306
+
+---
+
+Issue: "My Students Aren't Showing"
+Cause: Teacher not assigned to daycare/section
+Solution:
+- Admin must assign teacher to daycare
+- Admin must assign teacher to section
+- Refresh page
+- Check if students are archived
+- Wait for admin to approve pending enrollments
+
+---
+
+Issue: "Can't Upload Enrollment Documents"
+Cause: File size or format issue
+Solution:
+- Check file size (max 10MB)
+- Use supported formats: PDF, JPG, PNG
+- Check internet connection
+- Try different browser
+- Ensure sufficient disk space
+
+================================================================================
+ENVIRONMENT CONFIGURATION (.env FILE)
+================================================================================
+
+Application Settings:
+APP_NAME=Laravel
+APP_ENV=local (change to 'production' for live server)
+APP_DEBUG=true (change to false in production)
+APP_KEY=(auto-generated)
+APP_URL=http://localhost:8000
+APP_TIMEZONE=Asia/Manila
+BCRYPT_ROUNDS=12
+
+Database Settings:
+DB_CONNECTION=sqlite (or mysql, pgsql, sqlsrv)
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=
+DB_CHARSET=utf8mb4
+DB_COLLATION=utf8mb4_unicode_ci
+
+Session & Cache:
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+CACHE_STORE=database
+
+Queue & Broadcasting:
+QUEUE_CONNECTION=database
+BROADCAST_CONNECTION=log
+
+File Storage:
+FILESYSTEM_DISK=local
+
+Mail Configuration:
+MAIL_MAILER=log (change to 'smtp' in production)
+MAIL_FROM_ADDRESS="hello@example.com"
+
+================================================================================
+SECURITY CHECKLIST - BEFORE PRODUCTION DEPLOYMENT
+================================================================================
+
+✓ Change default admin password immediately
+✓ Update APP_DEBUG to false
+✓ Set APP_ENV to production
+✓ Generate strong APP_KEY (already done via key:generate)
+✓ Use strong, unique DB_PASSWORD
+✓ Enable HTTPS/SSL certificates
+✓ Set secure session timeout values
+✓ Enable email verification for all users
+✓ Implement password reset capability
+✓ Configure database backups
+✓ Restrict database access to app server only
+✓ Never commit .env file to version control
+✓ Update all dependencies to latest versions
+✓ Implement activity logging and monitoring
+✓ Set up error tracking (Sentry recommended)
+✓ Configure secure file storage
+✓ Implement GDPR compliance measures
+✓ Test login and access controls
+✓ Document all custom configurations
+
+================================================================================
+SUPPORT & RESOURCES
+================================================================================
+
+Documentation: https://github.com/Rakanya-dev/laravel-project
+Laravel Documentation: https://laravel.com/docs
+React Documentation: https://react.dev
+Technical Support: Check GitHub Issues repository
+
+Database Backups:
+Regular automated backups recommended for production
+Test restore procedures regularly
+Store backups securely and separately
+
+Performance Monitoring:
+Monitor database connections
+Track queue processing
+Monitor application logs in storage/logs/
+Set up error tracking
+Monitor cache and Redis usage
+
+================================================================================
+END OF INSTALLATION & ACCESS GUIDE
+================================================================================
+
+For more detailed information about features and functionality,
+refer to USER_MANUAL.md in the repository.
+
+Last Updated: August 2026
+System Version: Laravel 12 + React 19
+Repository ID: 964619401
